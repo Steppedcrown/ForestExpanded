@@ -5,29 +5,41 @@ class Platformer extends Phaser.Scene {
 
     init() {
         // variables and settings
-        this.ACCELERATION = 500;
-        this.DRAG = 6 * this.ACCELERATION;    // DRAG < ACCELERATION = icy slide
-        this.physics.world.gravity.y = 1500;
-        this.JUMP_VELOCITY = -500;
-        this.PARTICLE_VELOCITY = 50;
-        this.SCALE = 2.0;
+        this.ACCELERATION = 500; // acceleration of the player
+        this.DRAG = 6 * this.ACCELERATION; // DRAG < ACCELERATION = icy slide
+        this.physics.world.gravity.y = 1500; // gravity
+        this.JUMP_VELOCITY = -500; // jump velocity
+        this.PARTICLE_VELOCITY = 50; // velocity of the particles
+        this.SCALE = 2.0; // scale of the game
         this.MAX_VELOCITY = 300; // max speed
 
+        // Spawn points
+        this.spawnPoint = [75, 245]; // beginning spawn point
+        //this.spawnPoint = [1200, 0]; // end spawn point
+
+        // Game states
         this.isGameOver = false;
         this.wasGrounded = false;
         this.inputLocked = false;
-        this.spawnPoint = [75, 245]; // default spawn point
-        //this.spawnPoint = [1200, 0]; // end spawn point
+
+        // Coyote time
         this.coyoteTime = 0;
         this.COYOTE_DURATION = 100; // milliseconds of grace period
+
+        // Jump buffer
         this.jumpBufferRemaining = 0;
         this.hasJumped = false; // flag to check if the player has jumped
         this.JUMP_BUFFER_DURATION = 100; // milliseconds to buffer a jump input
+
+        // Variable jump
         this.JUMP_CUTOFF_VELOCITY = -200;  // Control how "short" a short hop is
-        this.UI_DEPTH = 99; // UI depth for buttons and text
+
+        // Movement SFX cooldowns
         this.walkStepCooldown = 0;
         this.STEP_INTERVAL = 200; // ms between steps
 
+        // Global depths
+        this.UI_DEPTH = 99; // UI depth for buttons and text
     }
 
     preload() {
@@ -39,8 +51,6 @@ class Platformer extends Phaser.Scene {
         this.map = this.add.tilemap("platformer-level-1", 18, 18, 80, 20);
 
         // Add a tileset to the map
-        // First parameter: name we gave the tileset in Tiled
-        // Second parameter: key for the tilesheet (from this.load.image in Load.js)
         this.tileset = this.map.addTilesetImage("kenny_tilemap_packed", "tilemap_tiles");
 
         // Create layers
@@ -71,21 +81,14 @@ class Platformer extends Phaser.Scene {
         my.sprite.player.setDepth(1);
         my.sprite.player.setOrigin(0.5, 1); // Origin to center bottom
 
+        // Enable collision handling
+        this.physics.add.collider(my.sprite.player, this.groundLayer);
 
         // Bounds
         this.physics.world.setBounds(0, -0, this.map.widthInPixels, this.map.heightInPixels);
         this.physics.world.setBoundsCollision(true, true, true, false);  // left, right, top, bottom
         my.sprite.player.setCollideWorldBounds(true);
         this.lastSafePosition = this.spawnPoint;
-
-        // Bounds
-        this.physics.world.setBoundsCollision(true, true, true, false);  // left, right, top, bottom
-        my.sprite.player.setCollideWorldBounds(true);
-        this.lastSafePosition = this.spawnPoint;
-
-
-        // Enable collision handling
-        this.physics.add.collider(my.sprite.player, this.groundLayer);
 
         // Add camera
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
@@ -96,6 +99,7 @@ class Platformer extends Phaser.Scene {
         const bgColor = this.cache.tilemap.get("platformer-level-1").data.backgroundcolor;
         if (bgColor) this.cameras.main.setBackgroundColor(bgColor);
 
+        // Set up game
         this.addButtons();
         this.setupScore();
         this.addObjects();
@@ -130,6 +134,9 @@ class Platformer extends Phaser.Scene {
         this.wasGrounded = groundedNow;
     }
 
+    /*************************************************************************************************************** 
+    -------------------------------------------------- GAME SETUP --------------------------------------------------
+    ***************************************************************************************************************/
     setupInput() {
         // Input handling
         cursors = this.input.keyboard.createCursorKeys();
@@ -431,6 +438,10 @@ class Platformer extends Phaser.Scene {
         });
     }
 
+    /**************************************************************************************************************************  
+    -------------------------------------------------- END OF GAME FUNCTIONS -------------------------------------------------- 
+    **************************************************************************************************************************/
+
     gameOver(text="Game Over") {
         this.buttonRect.setVisible(true); // Show the overlay
 
@@ -467,6 +478,10 @@ class Platformer extends Phaser.Scene {
         this.scene.stop("level1");
         this.scene.start("level1");
     }
+
+    /************************************************************************************************************* 
+    -------------------------------------------------- MOVEMENT -------------------------------------------------- 
+    *************************************************************************************************************/
 
     handleMovement(groundedNow) {
         let isWalking = false; // Track if the player is walking
@@ -517,6 +532,10 @@ class Platformer extends Phaser.Scene {
         }
         return isWalking; // Return whether the player is walking
     }
+
+    /****************************************************************************************************************** 
+    -------------------------------------------------- JUMPING + VFX -------------------------------------------------- 
+    ******************************************************************************************************************/
 
     handleJump(groundedNow, delta) {
                // Track how many consecutive frames the player is grounded
@@ -572,6 +591,10 @@ class Platformer extends Phaser.Scene {
             my.sprite.player.setVelocityY(Math.max(my.sprite.player.body.velocity.y, this.JUMP_CUTOFF_VELOCITY));
         }
     }
+
+    /************************************************************************************************************* 
+    -------------------------------------------------- JUCINESS -------------------------------------------------- 
+    *************************************************************************************************************/
 
     movementSFX(delta, isWalking, groundedNow) {
         // Movement sfx
@@ -637,6 +660,10 @@ class Platformer extends Phaser.Scene {
         // Slight horizontal squash (increase scaleX when leaning)
         my.sprite.player.setScale(1 - Math.abs(speedRatio) * (1 - maxSquash), my.sprite.player.scaleY); 
     }
+
+    /*********************************************************************************************************************** 
+    -------------------------------------------------- OFF MAP + SPAWNING -------------------------------------------------- 
+    ***********************************************************************************************************************/
 
     handleOffMap() {
         // If below world
