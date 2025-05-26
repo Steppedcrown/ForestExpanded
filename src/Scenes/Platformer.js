@@ -99,99 +99,9 @@ class Platformer extends Phaser.Scene {
         this.addButtons();
         this.setupScore();
         this.addObjects();
-
-        // Store audio
-        this.walkSound = this.sound.add('walkSound', {
-            loop: true
-        }); 
-        this.jumpSound = this.sound.add('jumpSound', {
-            volume: 0.25,
-            loop: false
-        });
-        this.levelCompleteSound = this.sound.add('levelCompleteSound', {
-            volume: 0.5,
-            loop: false
-        });
-        this.backgroundMusic = this.sound.add('bgMusic', {
-            volume: 0.4,
-            loop: true
-        });
-
-        // Input handling
-        cursors = this.input.keyboard.createCursorKeys();
-        this.dKey = this.input.keyboard.addKey('D');
-        this.aKey = this.input.keyboard.addKey('A');
-        this.spaceKey = this.input.keyboard.addKey('SPACE');
-
-        // Movement vfx
-        my.vfx.walking = this.add.particles(0, 0, "kenny-particles", {
-            frame: ['smoke_03.png', 'smoke_09.png'],
-            random: true,
-            scale: {start: 0.03, end: 0.05},
-            maxAliveParticles: 3,
-            lifespan: 250,
-            gravityY: -50,
-            duration: 500,
-            alpha: {start: 1, end: 0.25}, 
-        });
-        my.vfx.walking.stop();
-
-        // Jumping vfx
-        my.vfx.jumping = this.add.particles(0, 0, "kenny-particles", {
-            frame: ['smoke_10.png'],
-            scale: {start: 0.03, end: 0.07},
-            maxAliveParticles: 1,
-            lifespan: 200,
-            gravityY: -50,
-            duration: 1,
-            alpha: {start: 1, end: 0.4}
-        });
-        my.vfx.jumping.setDepth(2); // Ensure it appears above the player
-        my.vfx.jumping.stop();
-
-        // Landing vfx
-        my.vfx.landing = this.add.particles(0, 0, "kenny-particles", {
-            frame: ['smoke_10.png'],
-            scale: {start: 0.03, end: 0.06},
-            maxAliveParticles: 1,
-            lifespan: 200,
-            gravityY: -50,
-            duration: 1,
-            alpha: {start: 1, end: 0.4}
-        });
-        my.vfx.landing.setDepth(2); // Ensure it appears above the player
-        my.vfx.landing.stop();
-
-        // Collect vfx
-        my.vfx.collect = this.add.particles(0, 0, "kenny-particles", {
-            frame: ['star_08.png'],
-            scale: {start: 0.03, end: 0.06},
-            maxAliveParticles: 1,
-            lifespan: 1000,
-            gravityY: -50,
-            duration: 1,
-            alpha: {start: 0.8, end: 0.25}
-        });
-        my.vfx.collect.setDepth(10); // Ensure it appears behind the player
-        my.vfx.collect.stop();
-
-        // Bubbles
-        this.createBubbles(150, 240, 315, 375);
-        this.createBubbles(1050, 1270, 370, 375);
-        this.createBubbles(1275, 1375, 305, 375);
-
-        // Reset browser cache
-        this.input.keyboard.on('keydown-P', (event) => {
-            localStorage.setItem('highScore', 0);
-        }, this);
-
-        // Start background music
-        let bgMusic = this.registry.get('bgMusic') || false;
-        this.registry.set('bgMusic', bgMusic); // Set if music is playing
-        if (!bgMusic) {
-            this.backgroundMusic.play();
-            this.registry.set('bgMusic', true); // Set music is playing
-        }
+        this.setupInput();
+        this.setupAudio();
+        this.setupVFX();
     }
 
     update(time, delta) {
@@ -381,6 +291,105 @@ class Platformer extends Phaser.Scene {
                 //console.log("Safe spawn point updated to: ", this.lastSafePosition);
             }
         }
+    }
+
+    setupInput() {
+        // Input handling
+        cursors = this.input.keyboard.createCursorKeys();
+        this.dKey = this.input.keyboard.addKey('D');
+        this.aKey = this.input.keyboard.addKey('A');
+        this.spaceKey = this.input.keyboard.addKey('SPACE');
+
+        // Reset browser cache
+        this.input.keyboard.on('keydown-P', (event) => {
+            localStorage.setItem('highScore', 0);
+        }, this);
+    }
+
+    setupAudio() {
+        // Store audio
+        this.walkSound = this.sound.add('walkSound', {
+            loop: true
+        }); 
+        this.jumpSound = this.sound.add('jumpSound', {
+            volume: 0.25,
+            loop: false
+        });
+        this.levelCompleteSound = this.sound.add('levelCompleteSound', {
+            volume: 0.5,
+            loop: false
+        });
+        this.backgroundMusic = this.sound.add('bgMusic', {
+            volume: 0.4,
+            loop: true
+        });
+
+        // Start background music
+        let bgMusic = this.registry.get('bgMusic') || false;
+        this.registry.set('bgMusic', bgMusic); // Set if music is playing
+        if (!bgMusic) {
+            this.backgroundMusic.play();
+            this.registry.set('bgMusic', true); // Set music is playing
+        }
+    }
+
+    setupVFX() {
+        // Movement vfx
+        my.vfx.walking = this.add.particles(0, 0, "kenny-particles", {
+            frame: ['smoke_03.png', 'smoke_09.png'],
+            random: true,
+            scale: {start: 0.03, end: 0.05},
+            maxAliveParticles: 3,
+            lifespan: 250,
+            gravityY: -50,
+            duration: 500,
+            alpha: {start: 1, end: 0.25}, 
+        });
+        my.vfx.walking.stop();
+
+        // Jumping vfx
+        my.vfx.jumping = this.add.particles(0, 0, "kenny-particles", {
+            frame: ['smoke_10.png'],
+            scale: {start: 0.03, end: 0.07},
+            maxAliveParticles: 1,
+            lifespan: 200,
+            gravityY: -50,
+            duration: 1,
+            alpha: {start: 1, end: 0.4}
+        });
+        my.vfx.jumping.setDepth(2); // Ensure it appears above the player
+        my.vfx.jumping.stop();
+
+        // Landing vfx
+        my.vfx.landing = this.add.particles(0, 0, "kenny-particles", {
+            frame: ['smoke_10.png'],
+            scale: {start: 0.03, end: 0.06},
+            maxAliveParticles: 1,
+            lifespan: 200,
+            gravityY: -50,
+            duration: 1,
+            alpha: {start: 1, end: 0.4}
+        });
+        my.vfx.landing.setDepth(2); // Ensure it appears above the player
+        my.vfx.landing.stop();
+
+        // Collect vfx
+        my.vfx.collect = this.add.particles(0, 0, "kenny-particles", {
+            frame: ['star_08.png'],
+            scale: {start: 0.03, end: 0.06},
+            maxAliveParticles: 1,
+            lifespan: 1000,
+            gravityY: -50,
+            duration: 1,
+            alpha: {start: 0.8, end: 0.25}
+        });
+        my.vfx.collect.setDepth(10); // Ensure it appears behind the player
+        my.vfx.collect.stop();
+
+        // Bubbles
+        this.createBubbles(150, 240, 315, 375);
+        this.createBubbles(1050, 1270, 370, 375);
+        this.createBubbles(1275, 1375, 305, 375);
     }
 
     setupScore() {
