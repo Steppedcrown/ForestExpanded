@@ -102,6 +102,7 @@ class Platformer extends Phaser.Scene {
         this.addButtons();
         this.setupScore();
         this.addObjects();
+        this.addMovingPlatforms();
         this.setupInput();
         this.setupAudio();
         this.setupVFX();
@@ -476,6 +477,22 @@ class Platformer extends Phaser.Scene {
             rotate: { start: 0, end: 360 }, // optional spin
             blendMode: 'ADD',
             duration: -1, // Loop indefinitely
+        });
+    }
+
+    addMovingPlatforms() {
+        const objects = this.map.getObjectLayer('MovingPlatforms').objects;
+        const tileset = this.map.tilesets[0]; // or use the name if multiple
+        const firstGid = tileset.firstgid;
+
+        objects.forEach(obj => {
+            const frameIndex = obj.gid - firstGid; // Calculate the frame index
+            const platform = this.add.tileSprite(obj.x, obj.y, obj.width, obj.height, 'tilemap_sheet', frameIndex);
+            platform.setOrigin(0, 1); // Set origin to top-left
+
+            // Enable collision handling
+            this.physics.add.existing(platform, true);
+            this.physics.add.collider(my.sprite.player, platform);
         });
     }
 
