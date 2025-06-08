@@ -529,13 +529,22 @@ class Platformer extends Phaser.Scene {
                     const dx = platform.x - platform.prevX;
                     const dy = platform.y - platform.prevY;
 
-                    // Move player manually if standing on the platform
-                    if (my.sprite.player.body.touching.down && platform.body.touching.up) {
-                        my.sprite.player.x += dx / 2;
-                        my.sprite.player.y += dy / 2;
+                    const player = my.sprite.player;
+                    const pBody = player.body;
+                    const platBody = platform.body;
+
+                    // Only apply movement if player is grounded on platform
+                    const isGrounded =
+                        pBody.blocked.down || pBody.touching.down;
+                    const isTouchingPlatform =
+                        Phaser.Geom.Intersects.RectangleToRectangle(pBody, platBody);
+
+                    if (isGrounded && isTouchingPlatform) {
+                        player.x += dx;
+                        player.y += dy;
                     }
 
-                    // Sync static body and update prev positions
+                    // Update physics body and position tracker
                     platform.body.updateFromGameObject();
                     platform.prevX = platform.x;
                     platform.prevY = platform.y;
