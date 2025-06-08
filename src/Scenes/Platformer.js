@@ -117,8 +117,6 @@ class Platformer extends Phaser.Scene {
                 this.spawnPoint = [checkpoint.spawnX, checkpoint.spawnY];
                 this.registry.set('playerScore', checkpoint.score);
                 my.sprite.player.setPosition(checkpoint.spawnX, checkpoint.spawnY);
-
-                console.log('Checkpoint loaded:', checkpoint);
             }
         }
     }
@@ -147,6 +145,8 @@ class Platformer extends Phaser.Scene {
 
         // Update for next frame
         this.wasGrounded = groundedNow;
+
+        this.saveGame();
     }
 
     /*************************************************************************************************************** 
@@ -380,6 +380,36 @@ class Platformer extends Phaser.Scene {
         this.diamondGroup = this.add.group(this.diamonds);
         this.checkpoints = this.add.group(this.checkpoints);
 
+        const collected = new Set(JSON.parse(localStorage.getItem('collectedItems')));
+        if (collected) {
+            [this.coinGroup, this.diamondGroup].forEach(group => {
+                group.getChildren().forEach(obj => {
+                    const id = `${obj.name}_${Math.floor(obj.x)}_${Math.floor(obj.y)}`;
+                    if (collected.has(id)) {
+                        obj.destroy(); // Remove collected items
+                    }
+                });
+            });
+        }
+
+        const checkpointX = localStorage.getItem('checkpointX');
+        const checkpointY = localStorage.getItem('checkpointY');
+        if (checkpointX && checkpointY) {
+            this.checkpoints.getChildren().forEach(flag => {
+                if (flag.x == checkpointX && flag.y == checkpointY) {
+                    console.log(flag);
+                    this.spawnPoint = [flag.x, flag.y]; // Update spawn point to this flag
+                    this.tweens.add({
+                        targets: flag,
+                        y: flag.y - 8,
+                        duration: 700,
+                        ease: 'Linear'
+                    });
+                    flag.raised = true; // Mark this flag as raised
+                }
+            });
+        }
+
         // TODO: Add coin collision handler
         // Handle collision detection with coins
         this.physics.add.overlap(my.sprite.player, this.coinGroup, (player, coin) => {
@@ -401,6 +431,16 @@ class Platformer extends Phaser.Scene {
                 onComplete: () => coin.destroy()
             });
             this.updateScore(1); // increment score
+
+            const coinId = `coin_${Math.floor(coin.x)}_${Math.floor(coin.y)}`;
+            if (!this.collectedItems) {
+                this.collectedItems = new Set();
+            }
+
+            this.collectedItems.add(coinId); // e.g., 'coin_32_240'
+
+            // Save to localStorage
+            localStorage.setItem('collectedItems', JSON.stringify([...this.collectedItems]));
         });
         this.physics.add.overlap(my.sprite.player, this.diamondGroup, (player, diamond) => {
             diamond.body.enable = false;
@@ -422,11 +462,23 @@ class Platformer extends Phaser.Scene {
                 onComplete: () => diamond.destroy()
             });
             this.updateScore(5); // increment score
+
+            const diamondId = `diamond_${Math.floor(diamond.x)}_${Math.floor(diamond.y)}`;
+            if (!this.collectedItems) {
+                this.collectedItems = new Set();
+            }
+
+            this.collectedItems.add(diamondId); // e.g., 'coin_32_240'
+
+            // Save to localStorage
+            localStorage.setItem('collectedItems', JSON.stringify([...this.collectedItems]));
         });
         this.physics.add.overlap(my.sprite.player, this.checkpoints, (player, flag) => {
             // Check if at new checkpoint
             if (this.spawnPoint[0] != flag.x && this.spawnPoint[1] != flag.y) {
                 this.spawnPoint = [flag.x, flag.y]; // Update spawn point to this flag
+                localStorage.setItem('checkpointX', flag.x);
+                localStorage.setItem('checkpointY', flag.y);
                 this.tweens.add({
                     targets: flag,
                     y: flag.y - 8,
@@ -844,7 +896,9 @@ class Platformer extends Phaser.Scene {
                 //console.log("Safe spawn point updated to: ", this.lastSafePosition);
             }
         }
+    }
 
+    saveGame() {
         // Save to localStorage
         localStorage.setItem('savedCheckpoint', JSON.stringify({
             scene: this.scene.key,
