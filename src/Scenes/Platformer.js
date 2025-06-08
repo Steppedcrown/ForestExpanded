@@ -146,6 +146,7 @@ class Platformer extends Phaser.Scene {
 
         this.input.keyboard.on('keydown-ESC', () => {
             if (!this.scene.isActive('PauseOverlay')) {
+                this.click.play(); // Play button click sound
                 this.scene.launch('PauseOverlay', { gameSceneKey: this.scene.key });
                 this.scene.pause(); // Pause the current game scene
             }
@@ -165,6 +166,9 @@ class Platformer extends Phaser.Scene {
         this.levelCompleteSound = this.sound.add('levelCompleteSound', {
             volume: 0.5,
             loop: false
+        });
+        this.click = this.sound.add('uiClick', {
+            volume: 0.2
         });
     }
 
