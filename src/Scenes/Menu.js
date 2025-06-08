@@ -28,7 +28,7 @@ class Menu extends Phaser.Scene {
         };
 
         // Start Button
-        makeButton('[ Start Game ]', centerY, () => this.scene.start('scene1'));
+        makeButton('[ Start Game ]', centerY, () => this.scene.start('level1'));
 
         // Quit Button
         makeButton('[ Quit Game ]', centerY + 40, () => {

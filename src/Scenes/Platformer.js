@@ -148,6 +148,14 @@ class Platformer extends Phaser.Scene {
         this.input.keyboard.on('keydown-P', (event) => {
             localStorage.setItem('highScore', 0);
         }, this);
+
+        this.input.keyboard.on('keydown-ESC', () => {
+            if (!this.scene.isActive('PauseOverlay')) {
+                this.scene.launch('PauseOverlay', { gameSceneKey: this.scene.key });
+                this.scene.pause(); // Pause the current game scene
+            }
+        });
+
     }
 
     setupAudio() {
