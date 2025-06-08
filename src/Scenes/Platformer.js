@@ -144,10 +144,13 @@ class Platformer extends Phaser.Scene {
         this.aKey = this.input.keyboard.addKey('A');
         this.spaceKey = this.input.keyboard.addKey('SPACE');
 
-        // Reset browser cache
-        this.input.keyboard.on('keydown-P', (event) => {
-            localStorage.setItem('highScore', 0);
-        }, this);
+        this.input.keyboard.on('keydown-ESC', () => {
+            if (!this.scene.isActive('PauseOverlay')) {
+                this.scene.launch('PauseOverlay', { gameSceneKey: this.scene.key });
+                this.scene.pause(); // Pause the current game scene
+            }
+        });
+
     }
 
     setupAudio() {
@@ -163,18 +166,6 @@ class Platformer extends Phaser.Scene {
             volume: 0.5,
             loop: false
         });
-        this.backgroundMusic = this.sound.add('bgMusic', {
-            volume: 0.4,
-            loop: true
-        });
-
-        // Start background music
-        let bgMusic = this.registry.get('bgMusic') || false;
-        this.registry.set('bgMusic', bgMusic); // Set if music is playing
-        if (!bgMusic) {
-            this.backgroundMusic.play();
-            this.registry.set('bgMusic', true); // Set music is playing
-        }
     }
 
     setupVFX() {
@@ -249,12 +240,12 @@ class Platformer extends Phaser.Scene {
         this.displayScore.setScrollFactor(0); // Make it not scroll with the camera
 
         // Add high score text
-        this.displayHighScore = this.add.bitmapText(xPos, yPos + 25, 'myFont', 'High: ' + (parseInt(localStorage.getItem('highScore')) || 0), fontSize);
-        this.displayHighScore.setScrollFactor(0); // Make it not scroll with the camera
+        //this.displayHighScore = this.add.bitmapText(xPos, yPos + 25, 'myFont', 'High: ' + (parseInt(localStorage.getItem('highScore')) || 0), fontSize);
+        //this.displayHighScore.setScrollFactor(0); // Make it not scroll with the camera
 
         // Move to front
         this.displayScore.setDepth(this.UI_DEPTH);
-        this.displayHighScore.setDepth(this.UI_DEPTH);
+        //this.displayHighScore.setDepth(this.UI_DEPTH);
     }
 
     updateScore(givenPoints) {
@@ -453,8 +444,10 @@ class Platformer extends Phaser.Scene {
         this.inputLocked = true;
 
         // Play level complete sound
-        this.backgroundMusic.setVolume(0.1); // Lower volume
-        if (!this.levelCompleteSound.isPlaying) this.levelCompleteSound.play();
+        if (!this.levelCompleteSound.isPlaying) {
+            this.registry.get('bgMusic').setVolume(0.1); // Lower background music volume
+            this.levelCompleteSound.play();
+        }
     }
 
     restartGame() {
@@ -474,7 +467,7 @@ class Platformer extends Phaser.Scene {
 
         this.registry.set('playerScore', 0);
         this.levelCompleteSound.stop(); // Stop level complete sound
-        this.backgroundMusic.setVolume(0.4); // Reset background music volume
+        this.registry.get('bgMusic').setVolume(0.4); // Reset background music volume
         this.scene.stop("level1");
         this.scene.start("level1");
     }
