@@ -102,6 +102,7 @@ class Platformer extends Phaser.Scene {
         this.addButtons();
         this.setupScore();
         this.addObjects();
+        this.addMovingPlatforms();
         this.setupInput();
         this.setupAudio();
         this.setupVFX();
@@ -476,6 +477,79 @@ class Platformer extends Phaser.Scene {
             rotate: { start: 0, end: 360 }, // optional spin
             blendMode: 'ADD',
             duration: -1, // Loop indefinitely
+        });
+    }
+
+    addMovingPlatforms() {
+        const objects = this.map.getObjectLayer('MovingPlatforms').objects;
+        const tileset = this.map.tilesets[0]; // or use the name if multiple
+        const firstGid = tileset.firstgid;
+
+        objects.forEach(obj => {
+            const frameIndex = obj.gid - firstGid; // Calculate the frame index
+            const platform = this.add.tileSprite(obj.x, obj.y, obj.width, obj.height, 'tilemap_sheet', frameIndex);
+            platform.setOrigin(0, 1); // Set origin to top-left
+
+            // Enable collision handling
+            this.physics.add.existing(platform, true);
+            this.physics.add.collider(my.sprite.player, platform);
+
+            // Extract properties
+            const props = {};
+            if (obj.properties) {
+                obj.properties.forEach(p => props[p.name] = p.value);
+            }
+
+            // Movement config from Tiled
+            //const axis = props.axis || 'x';
+            const axis = props.axis || 'y'; // Default to vertical movement
+            const range = props.range || 100;
+            const speed = props.speed || 50;
+
+            // Calculate tween duration
+            const duration = (range / speed) * 1000;
+
+            // Determine target position
+            const targetPos = (axis === 'x')
+                ? { x: platform.x + range }
+                : { y: platform.y - range }; // up if y
+
+            // Tween to move platform
+            this.tweens.add({
+                targets: platform,
+                ...targetPos,
+                duration,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+                onUpdate: () => {
+                    platform.body.updateFromGameObject(); // Required for static bodies
+                },
+                onUpdate: () => {
+                    const dx = platform.x - platform.prevX;
+                    const dy = platform.y - platform.prevY;
+
+                    const player = my.sprite.player;
+                    const pBody = player.body;
+                    const platBody = platform.body;
+
+                    // Only apply movement if player is grounded on platform
+                    const isGrounded =
+                        pBody.blocked.down || pBody.touching.down;
+                    const isTouchingPlatform =
+                        Phaser.Geom.Intersects.RectangleToRectangle(pBody, platBody);
+
+                    if (isGrounded && isTouchingPlatform) {
+                        player.x += dx;
+                        player.y += dy;
+                    }
+
+                    // Update physics body and position tracker
+                    platform.body.updateFromGameObject();
+                    platform.prevX = platform.x;
+                    platform.prevY = platform.y;
+                }
+            });
         });
     }
 
