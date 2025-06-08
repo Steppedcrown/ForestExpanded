@@ -257,11 +257,17 @@ class Platformer extends Phaser.Scene {
     addButtons() {
         // Restart game button
         // Create a semi-transparent overlay
-        this.buttonRect = this.add.rectangle(this.scale.width/2, this.scale.height/2 + 20, 200, 60, 0x000000, 0.5);
-        this.buttonRect.setOrigin(0.5, 0.5);
-        this.buttonRect.setScrollFactor(0); // Make it not scroll with the camera
-        this.buttonRect.setVisible(false); // Hide the rectangle initially
-        this.buttonRect.setDepth(this.UI_DEPTH); // Ensure it appears above other elements
+        this.buttonRect = this.add.rectangle(this.scale.width/2, this.scale.height/2 + 20, 200, 60, 0x000000, 0.5)
+        .setOrigin(0.5, 0.5)
+        .setScrollFactor(0) // Make it not scroll with the camera
+        .setVisible(false) // Hide the rectangle initially
+        .setDepth(this.UI_DEPTH); // Ensure it appears above other elements
+
+        this.buttonRect2 = this.add.rectangle(this.scale.width/2, this.scale.height/2 + 100, 200, 60, 0x000000, 0.5)
+        .setOrigin(0.5, 0.5)
+        .setScrollFactor(0) // Make it not scroll with the camera
+        .setVisible(false) // Hide the rectangle initially
+        .setDepth(this.UI_DEPTH); // Ensure it appears above other elements
 
         // Display "Game Over" text
         this.gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2 - 50, "Game over", {
@@ -269,12 +275,12 @@ class Platformer extends Phaser.Scene {
             color: "#ffffff",
             stroke: "#000000",
             strokeThickness: 5
-        }).setOrigin(0.5);
-        this.gameOverText.setVisible(false); // Hide the text initially
-        this.gameOverText.setScrollFactor(0); // Make it not scroll with the camera
+        }).setOrigin(0.5)
+        .setVisible(false) // Hide the text initially
+        .setScrollFactor(0); // Make it not scroll with the camera
 
         // Restart button
-        this.restartButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 20, "Play Again", {
+        this.restartButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 100, "Play Again", {
             fontSize: "24px",
             backgroundColor: "#ffffff",
             color: "#000000",
@@ -287,13 +293,33 @@ class Platformer extends Phaser.Scene {
                 volume: 0.5,
                 loop: false
             });
-            this.restartGame();
-        });
-        this.restartButton.setOrigin(0.5, 0.5);
-        this.restartButton.setScrollFactor(0); // Make it not scroll with the camera
-        this.restartButton.setVisible(false); // Hide the button initially
-        this.restartButton.setInteractive(false); // Disable interaction initially
-        this.restartButton.setDepth(this.UI_DEPTH); // Ensure it appears above other elements
+            this.restartGame(true);
+        }).setOrigin(0.5, 0.5)
+        .setScrollFactor(0) // Make it not scroll with the camera
+        .setVisible(false) // Hide the button initially
+        .setInteractive(false) // Disable interaction initially
+        .setDepth(this.UI_DEPTH); // Ensure it appears above other elements
+
+        // Continue button
+        this.continueButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 20, "Resume", {
+            fontSize: "24px",
+            backgroundColor: "#ffffff",
+            color: "#000000",
+            padding: { x: 20, y: 10 } // Add padding around the text
+        })
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => {
+            // Play click sound
+            this.sound.play('uiClick', {
+                volume: 0.5,
+                loop: false
+            });
+            this.restartGame(false);
+        }).setOrigin(0.5, 0.5)
+        .setScrollFactor(0) // Make it not scroll with the camera
+        .setVisible(false) // Hide the button initially
+        .setInteractive(false) // Disable interaction initially
+        .setDepth(this.UI_DEPTH); // Ensure it appears above other elements
     }
 
     addObjects() {
@@ -401,6 +427,14 @@ class Platformer extends Phaser.Scene {
                     }
                 });
             }
+            if (flag.data.values.endFlag) {
+                if (!this.isGameOver) {
+                    this.isGameOver = true; // prevent multiple triggers
+                    console.log("You reached the end! Final Score: " + this.registry.get('playerScore'));
+                    this.gameOver("You win!");
+
+                }
+            }
         });
 
         // Play animations
@@ -451,12 +485,15 @@ class Platformer extends Phaser.Scene {
 
     gameOver(text="Game Over") {
         this.buttonRect.setVisible(true); // Show the overlay
+        this.buttonRect2.setVisible(true); // Show the second overlay
 
         this.gameOverText.setText(text); // Set the text
         this.gameOverText.setVisible(true); // Show the text
 
         this.restartButton.setVisible(true); // Show the button
         this.restartButton.setInteractive(true); // Enable interaction
+        this.continueButton.setVisible(true); // Show the continue button
+        this.continueButton.setInteractive(true); // Enable interaction
         this.inputLocked = true;
 
         // Play level complete sound
@@ -466,26 +503,37 @@ class Platformer extends Phaser.Scene {
         }
     }
 
-    restartGame() {
+    restartGame(restart) {
         this.buttonRect.setVisible(false); // Hide the overlay
+        this.buttonRect2.setVisible(false); // Hide the second overlay
         
         this.gameOverText.setVisible(false); // Hide the text
 
         this.restartButton.setVisible(false); // Hide the button
         this.restartButton.setInteractive(false); // Disable interaction
+        this.continueButton.setVisible(false); // Hide the continue button
+        this.continueButton.setInteractive(false); // Disable interaction
 
         let playerScore = this.registry.get('playerScore');
         // Check if the player score is greater than the high score
         if (playerScore > parseInt(localStorage.getItem('highScore')) || !localStorage.getItem('highScore')) {
             localStorage.setItem('highScore', playerScore);
-            this.displayHighScore.setText('High: ' + parseInt(localStorage.getItem('highScore')));
         }
 
-        this.registry.set('playerScore', 0);
         this.levelCompleteSound.stop(); // Stop level complete sound
         this.registry.get('bgMusic').setVolume(0.4); // Reset background music volume
-        this.scene.stop("level1");
-        this.scene.start("level1");
+
+        if (restart) {
+            this.registry.set('playerScore', 0);
+            this.scene.stop("level1");
+            this.scene.start("level1");
+        } else {
+            this.inputLocked = false;
+            this.time.delayedCall(5000, () => { // wait 5 seconds before resetting so player leaves flag
+                this.isGameOver = false; // Reset game over state
+            });
+
+        }
     }
 
     /************************************************************************************************************* 

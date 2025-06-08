@@ -444,6 +444,12 @@
                  "height":18,
                  "id":79,
                  "name":"flag",
+                 "properties":[
+                        {
+                         "name":"endFlag",
+                         "type":"bool",
+                         "value":true
+                        }],
                  "rotation":0,
                  "type":"",
                  "visible":true,
@@ -542,7 +548,7 @@
          "y":0
         }],
  "nextlayerid":9,
- "nextobjectid":93,
+ "nextobjectid":94,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",
@@ -1311,7 +1317,13 @@
                          "duration":200,
                          "tileid":112
                         }],
-                 "id":111
+                 "id":111,
+                 "properties":[
+                        {
+                         "name":"endFlag",
+                         "type":"bool",
+                         "value":false
+                        }]
                 }, 
                 {
                  "id":113,
