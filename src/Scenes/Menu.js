@@ -36,18 +36,32 @@ class Menu extends Phaser.Scene {
                 .on('pointerout', () => bg.setVisible(false));
         };
 
+        let offsetY = 0;
+        if (localStorage.getItem('savedCheckpoint')) {
+            makeButton('[ Continue ]', centerY, () => this.scene.start('level1'));
+            offsetY += 30; // Adjust offset
+        }
+
         // Start Button
-        makeButton('[ Start Game ]', centerY, () => this.scene.start('level1'));
+        makeButton('[ New Game ]', centerY + offsetY, () => {
+            localStorage.removeItem('savedCheckpoint'); // Clear any saved checkpoint
+            this.scene.start('level1');
+        });
 
         // Quit Button
-        makeButton('[ Quit Game ]', centerY + 40, () => {
+        makeButton('[ Quit Game ]', centerY + offsetY + 30, () => {
             window.close();
             window.open('', '_self')?.close();
         });
 
-        // Reset browser cache
-        this.input.keyboard.on('keydown-P', (event) => {
+        makeButton('[ Reset High Score ]', centerY + 120, () => {
             localStorage.setItem('highScore', 0);
-        }, this);
+            this.displayHighScore.setText('High Score: 0');
+        });
+
+        makeButton('[ Reset Browser Cache ]', centerY + 150, () => {
+            localStorage.clear();
+            this.displayHighScore.setText('High Score: 0');
+        });
     }
 }
