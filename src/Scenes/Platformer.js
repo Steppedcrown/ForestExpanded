@@ -493,6 +493,54 @@ class Platformer extends Phaser.Scene {
             // Enable collision handling
             this.physics.add.existing(platform, true);
             this.physics.add.collider(my.sprite.player, platform);
+
+            // Extract properties
+            const props = {};
+            if (obj.properties) {
+                obj.properties.forEach(p => props[p.name] = p.value);
+            }
+
+            // Movement config from Tiled
+            //const axis = props.axis || 'x';
+            const axis = 'x';
+            const range = props.range || 100;
+            const speed = props.speed || 50;
+
+            // Calculate tween duration
+            const duration = (range / speed) * 1000;
+
+            // Determine target position
+            const targetPos = (axis === 'x')
+                ? { x: platform.x + range }
+                : { y: platform.y - range }; // up if y
+
+            // Tween to move platform
+            this.tweens.add({
+                targets: platform,
+                ...targetPos,
+                duration,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+                onUpdate: () => {
+                    platform.body.updateFromGameObject(); // Required for static bodies
+                },
+                onUpdate: () => {
+                    const dx = platform.x - platform.prevX;
+                    const dy = platform.y - platform.prevY;
+
+                    // Move player manually if standing on the platform
+                    if (my.sprite.player.body.touching.down && platform.body.touching.up) {
+                        my.sprite.player.x += dx / 2;
+                        my.sprite.player.y += dy / 2;
+                    }
+
+                    // Sync static body and update prev positions
+                    platform.body.updateFromGameObject();
+                    platform.prevX = platform.x;
+                    platform.prevY = platform.y;
+                }
+            });
         });
     }
 

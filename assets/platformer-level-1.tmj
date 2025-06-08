@@ -557,6 +557,22 @@
                  "height":18,
                  "id":94,
                  "name":"platform",
+                 "properties":[
+                        {
+                         "name":"axis",
+                         "type":"string",
+                         "value":"y"
+                        }, 
+                        {
+                         "name":"range",
+                         "type":"int",
+                         "value":50
+                        }, 
+                        {
+                         "name":"speed",
+                         "type":"int",
+                         "value":50
+                        }],
                  "rotation":0,
                  "type":"",
                  "visible":true,
@@ -569,6 +585,22 @@
                  "height":18,
                  "id":95,
                  "name":"platform",
+                 "properties":[
+                        {
+                         "name":"axis",
+                         "type":"string",
+                         "value":"y"
+                        }, 
+                        {
+                         "name":"range",
+                         "type":"int",
+                         "value":50
+                        }, 
+                        {
+                         "name":"speed",
+                         "type":"int",
+                         "value":50
+                        }],
                  "rotation":0,
                  "type":"",
                  "visible":true,
@@ -581,6 +613,22 @@
                  "height":18,
                  "id":96,
                  "name":"platform",
+                 "properties":[
+                        {
+                         "name":"axis",
+                         "type":"string",
+                         "value":"y"
+                        }, 
+                        {
+                         "name":"range",
+                         "type":"int",
+                         "value":50
+                        }, 
+                        {
+                         "name":"speed",
+                         "type":"int",
+                         "value":50
+                        }],
                  "rotation":0,
                  "type":"",
                  "visible":true,
