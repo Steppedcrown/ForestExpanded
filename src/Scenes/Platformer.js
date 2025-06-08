@@ -241,9 +241,9 @@ class Platformer extends Phaser.Scene {
         let playerScore = this.registry.get('playerScore') || 0;
         this.registry.set('playerScore', playerScore);
         
-        let xPos = 1140;
-        let yPos = 490;
-        let fontSize = 12;
+        let xPos = 1090;
+        let yPos = 495;
+        let fontSize = 10;
         // Add score text
         this.displayScore = this.add.bitmapText(xPos, yPos, 'myFont', 'Score: ' + this.registry.get('playerScore'), fontSize);
         this.displayScore.setScrollFactor(0); // Make it not scroll with the camera

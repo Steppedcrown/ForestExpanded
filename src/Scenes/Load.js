@@ -20,7 +20,7 @@ class Load extends Phaser.Scene {
         });
 
         // Font
-        this.load.bitmapFont('myFont', 'myFont.png', 'myFont.xml');
+        this.load.bitmapFont('myFont', 'pixelFont.png', 'pixel.xml');
 
         // Audio
         this.load.audio('levelCompleteSound', 'mixkit-game-level-completed-2059.wav');
