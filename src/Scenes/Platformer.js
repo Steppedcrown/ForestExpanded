@@ -502,7 +502,7 @@ class Platformer extends Phaser.Scene {
 
             // Movement config from Tiled
             //const axis = props.axis || 'x';
-            const axis = 'x';
+            const axis = props.axis || 'y'; // Default to vertical movement
             const range = props.range || 100;
             const speed = props.speed || 50;
 
