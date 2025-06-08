@@ -91,6 +91,18 @@ class Load extends Phaser.Scene {
             repeat: -1  // loop forever
         });
 
+        this.backgroundMusic = this.sound.add('bgMusic', {
+            volume: 0.4,
+            loop: true
+        });
+
+        // Start background music
+        let bgMusic = this.registry.get('bgMusic') || false;
+        this.registry.set('bgMusic', bgMusic); // Set if music is playing
+        if (!bgMusic) {
+            this.registry.set('bgMusic', this.backgroundMusic); // Set music
+            this.registry.get('bgMusic').play(); // Play background music
+        }
 
          // ...and pass to the next Scene
          this.scene.start("menu");

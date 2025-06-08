@@ -180,8 +180,8 @@ class Platformer extends Phaser.Scene {
         let bgMusic = this.registry.get('bgMusic') || false;
         this.registry.set('bgMusic', bgMusic); // Set if music is playing
         if (!bgMusic) {
-            this.backgroundMusic.play();
-            this.registry.set('bgMusic', true); // Set music is playing
+            this.registry.set('bgMusic', this.backgroundMusic); // Set music
+            this.registry.get('bgMusic').play(); // Play background music
         }
     }
 
@@ -461,8 +461,10 @@ class Platformer extends Phaser.Scene {
         this.inputLocked = true;
 
         // Play level complete sound
-        this.backgroundMusic.setVolume(0.1); // Lower volume
-        if (!this.levelCompleteSound.isPlaying) this.levelCompleteSound.play();
+        if (!this.levelCompleteSound.isPlaying) {
+            this.registry.get('bgMusic').setVolume(0.1); // Lower background music volume
+            this.levelCompleteSound.play();
+        }
     }
 
     restartGame() {
@@ -482,7 +484,7 @@ class Platformer extends Phaser.Scene {
 
         this.registry.set('playerScore', 0);
         this.levelCompleteSound.stop(); // Stop level complete sound
-        this.backgroundMusic.setVolume(0.4); // Reset background music volume
+        this.registry.get('bgMusic').setVolume(0.4); // Reset background music volume
         this.scene.stop("level1");
         this.scene.start("level1");
     }
