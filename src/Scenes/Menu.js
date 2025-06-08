@@ -10,6 +10,8 @@ class Menu extends Phaser.Scene {
         // Title
         this.add.bitmapText(centerX, centerY - 100, 'myFont', 'Forest of Advantis', 24).setOrigin(0.5);
 
+        this.displayHighScore = this.add.bitmapText(50, 50, 'myFont', 'High Score: ' + (parseInt(localStorage.getItem('highScore')) || 0), 16);
+
         // Helper function to create buttons with highlight background
         const makeButton = (text, y, callback) => {
             const label = this.add.bitmapText(centerX, y, 'myFont', text, 16).setOrigin(0.5);
@@ -35,5 +37,10 @@ class Menu extends Phaser.Scene {
             window.close();
             window.open('', '_self')?.close();
         });
+
+        // Reset browser cache
+        this.input.keyboard.on('keydown-P', (event) => {
+            localStorage.setItem('highScore', 0);
+        }, this);
     }
 }

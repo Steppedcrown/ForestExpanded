@@ -144,11 +144,6 @@ class Platformer extends Phaser.Scene {
         this.aKey = this.input.keyboard.addKey('A');
         this.spaceKey = this.input.keyboard.addKey('SPACE');
 
-        // Reset browser cache
-        this.input.keyboard.on('keydown-P', (event) => {
-            localStorage.setItem('highScore', 0);
-        }, this);
-
         this.input.keyboard.on('keydown-ESC', () => {
             if (!this.scene.isActive('PauseOverlay')) {
                 this.scene.launch('PauseOverlay', { gameSceneKey: this.scene.key });
@@ -171,18 +166,6 @@ class Platformer extends Phaser.Scene {
             volume: 0.5,
             loop: false
         });
-        this.backgroundMusic = this.sound.add('bgMusic', {
-            volume: 0.4,
-            loop: true
-        });
-
-        // Start background music
-        let bgMusic = this.registry.get('bgMusic') || false;
-        this.registry.set('bgMusic', bgMusic); // Set if music is playing
-        if (!bgMusic) {
-            this.registry.set('bgMusic', this.backgroundMusic); // Set music
-            this.registry.get('bgMusic').play(); // Play background music
-        }
     }
 
     setupVFX() {
@@ -257,12 +240,12 @@ class Platformer extends Phaser.Scene {
         this.displayScore.setScrollFactor(0); // Make it not scroll with the camera
 
         // Add high score text
-        this.displayHighScore = this.add.bitmapText(xPos, yPos + 25, 'myFont', 'High: ' + (parseInt(localStorage.getItem('highScore')) || 0), fontSize);
-        this.displayHighScore.setScrollFactor(0); // Make it not scroll with the camera
+        //this.displayHighScore = this.add.bitmapText(xPos, yPos + 25, 'myFont', 'High: ' + (parseInt(localStorage.getItem('highScore')) || 0), fontSize);
+        //this.displayHighScore.setScrollFactor(0); // Make it not scroll with the camera
 
         // Move to front
         this.displayScore.setDepth(this.UI_DEPTH);
-        this.displayHighScore.setDepth(this.UI_DEPTH);
+        //this.displayHighScore.setDepth(this.UI_DEPTH);
     }
 
     updateScore(givenPoints) {
