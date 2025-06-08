@@ -8,31 +8,32 @@ class Menu extends Phaser.Scene {
         const centerY = this.cameras.main.height / 2;
 
         // Title
-        this.add.bitmapText(centerX, centerY - 100, 'myFont', 'Forest of Advantis', 24)
-            .setOrigin(0.5);
+        this.add.bitmapText(centerX, centerY - 100, 'myFont', 'Forest of Advantis', 24).setOrigin(0.5);
 
-        // Start Game Button
-        const startBtn = this.add.bitmapText(centerX, centerY, 'myFont', '[ Start Game ]', 16)
-            .setOrigin(0.5)
-            .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.scene.start('level1'));
+        // Helper function to create buttons with highlight background
+        const makeButton = (text, y, callback) => {
+            const label = this.add.bitmapText(centerX, y, 'myFont', text, 16).setOrigin(0.5);
 
-        // Quit Game Button
-        const quitBtn = this.add.bitmapText(centerX, centerY + 40, 'myFont', '[ Quit Game ]', 16)
-            .setOrigin(0.5)
-            .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => {
-                // Attempt to close the tab (only works if triggered by user interaction)
-                window.close();
+            const padding = 4; // Padding around the text
+            const width = label.width + padding * 2;
+            const height = label.height + padding * 2;
 
-                // Fallback: Redirect to a "goodbye" page or blank tab
-                window.open('', '_self')?.close();
-            });
+            const bg = this.add.rectangle(label.x, label.y, width, height, 0xffff00, 0.3);
+            bg.setVisible(false);
 
-        // Optional: hover effect
-        [startBtn, quitBtn].forEach(btn => {
-            btn.on('pointerover', () => btn.setTint(0xffff00));
-            btn.on('pointerout', () => btn.clearTint());
+            label.setInteractive({ useHandCursor: true })
+                .on('pointerdown', callback)
+                .on('pointerover', () => bg.setVisible(true))
+                .on('pointerout', () => bg.setVisible(false));
+        };
+
+        // Start Button
+        makeButton('[ Start Game ]', centerY, () => this.scene.start('scene1'));
+
+        // Quit Button
+        makeButton('[ Quit Game ]', centerY + 40, () => {
+            window.close();
+            window.open('', '_self')?.close();
         });
     }
 }
