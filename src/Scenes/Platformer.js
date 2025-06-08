@@ -316,7 +316,7 @@ class Platformer extends Phaser.Scene {
             frame: 67
         });
 
-        this.checkpoint = this.map.createFromObjects("Objects", {
+        this.checkpoints = this.map.createFromObjects("Objects", {
             name: "flag",
             key: "tilemap_sheet",
             frame: 111
@@ -327,13 +327,13 @@ class Platformer extends Phaser.Scene {
         // them into Arcade Physics sprites (STATIC_BODY, so they don't move) 
         this.physics.world.enable(this.coins, Phaser.Physics.Arcade.STATIC_BODY);
         this.physics.world.enable(this.diamonds, Phaser.Physics.Arcade.STATIC_BODY);
-        this.physics.world.enable(this.checkpoint, Phaser.Physics.Arcade.STATIC_BODY);
+        this.physics.world.enable(this.checkpoints, Phaser.Physics.Arcade.STATIC_BODY);
 
         // Create a Phaser group out of the array this.coins
         // This will be used for collision detection below.
         this.coinGroup = this.add.group(this.coins);
         this.diamondGroup = this.add.group(this.diamonds);
-        this.checkpoint = this.add.group(this.checkpoint);
+        this.checkpoints = this.add.group(this.checkpoints);
 
         // TODO: Add coin collision handler
         // Handle collision detection with coins
@@ -378,14 +378,27 @@ class Platformer extends Phaser.Scene {
             });
             this.updateScore(5); // increment score
         });
-        this.physics.add.overlap(my.sprite.player, this.checkpoint, (player, flag) => {
+        this.physics.add.overlap(my.sprite.player, this.checkpoints, (player, flag) => {
             if (this.spawnPoint[0] != flag.x && this.spawnPoint[1] != flag.y) { // check if this is a new flag
                 this.spawnPoint = [flag.x, flag.y]; // Update spawn point to this flag
                 this.tweens.add({
                     targets: flag,
-                    y: flag.y - 10,
-                    duration: 750,
+                    y: flag.y - 8,
+                    duration: 700,
                     ease: 'Linear'
+                });
+                flag.raised = true; // Mark this flag as raised
+                this.checkpoints.getChildren().forEach(f => {
+                    if (f !== flag && f.raised) {
+                        // Lower all other flags
+                        this.tweens.add({
+                            targets: f,
+                            y: f.y + 8,
+                            duration: 700,
+                            ease: 'Linear'
+                        });
+                        f.raised = false; // Mark this flag as lowered
+                    }
                 });
             }
         });
@@ -394,7 +407,7 @@ class Platformer extends Phaser.Scene {
         this.coinGroup.getChildren().forEach(coin => {
             coin.anims.play('coinSpin');
         });
-        this.checkpoint.getChildren().forEach(flag => {
+        this.checkpoints.getChildren().forEach(flag => {
             flag.anims.play('flagWave');
         });
 
