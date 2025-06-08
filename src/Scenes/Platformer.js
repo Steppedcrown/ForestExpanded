@@ -88,7 +88,6 @@ class Platformer extends Phaser.Scene {
         this.physics.world.setBounds(0, -0, this.map.widthInPixels, this.map.heightInPixels);
         this.physics.world.setBoundsCollision(true, true, true, false);  // left, right, top, bottom
         my.sprite.player.setCollideWorldBounds(true);
-        this.lastSafePosition = this.spawnPoint;
 
         // Add camera
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
@@ -125,10 +124,7 @@ class Platformer extends Phaser.Scene {
         this.landingVFX(groundedNow);
 
         // Check for off-map
-        this.handleOffMap();
-
-        // Update respawn point
-        this.updateSpawn(groundedNow);
+        this.handleRespawn();
 
         // Update for next frame
         this.wasGrounded = groundedNow;
@@ -320,7 +316,7 @@ class Platformer extends Phaser.Scene {
             frame: 67
         });
 
-        this.endFlag = this.map.createFromObjects("Objects", {
+        this.checkpoint = this.map.createFromObjects("Objects", {
             name: "flag",
             key: "tilemap_sheet",
             frame: 111
@@ -331,13 +327,13 @@ class Platformer extends Phaser.Scene {
         // them into Arcade Physics sprites (STATIC_BODY, so they don't move) 
         this.physics.world.enable(this.coins, Phaser.Physics.Arcade.STATIC_BODY);
         this.physics.world.enable(this.diamonds, Phaser.Physics.Arcade.STATIC_BODY);
-        this.physics.world.enable(this.endFlag, Phaser.Physics.Arcade.STATIC_BODY);
+        this.physics.world.enable(this.checkpoint, Phaser.Physics.Arcade.STATIC_BODY);
 
         // Create a Phaser group out of the array this.coins
         // This will be used for collision detection below.
         this.coinGroup = this.add.group(this.coins);
         this.diamondGroup = this.add.group(this.diamonds);
-        this.endFlag = this.add.group(this.endFlag);
+        this.checkpoint = this.add.group(this.checkpoint);
 
         // TODO: Add coin collision handler
         // Handle collision detection with coins
@@ -382,12 +378,15 @@ class Platformer extends Phaser.Scene {
             });
             this.updateScore(5); // increment score
         });
-        this.physics.add.overlap(my.sprite.player, this.endFlag, (player, flag) => {
-            if (!this.isGameOver) {
-                this.isGameOver = true; // prevent multiple triggers
-                console.log("You reached the end! Final Score: " + this.score);
-                this.gameOver("You win!");
-
+        this.physics.add.overlap(my.sprite.player, this.checkpoint, (player, flag) => {
+            if (this.spawnPoint[0] != flag.x && this.spawnPoint[1] != flag.y) { // check if this is a new flag
+                this.spawnPoint = [flag.x, flag.y]; // Update spawn point to this flag
+                this.tweens.add({
+                    targets: flag,
+                    y: flag.y - 10,
+                    duration: 750,
+                    ease: 'Linear'
+                });
             }
         });
 
@@ -395,7 +394,7 @@ class Platformer extends Phaser.Scene {
         this.coinGroup.getChildren().forEach(coin => {
             coin.anims.play('coinSpin');
         });
-        this.endFlag.getChildren().forEach(flag => {
+        this.checkpoint.getChildren().forEach(flag => {
             flag.anims.play('flagWave');
         });
 
@@ -662,10 +661,15 @@ class Platformer extends Phaser.Scene {
     -------------------------------------------------- OFF MAP + SPAWNING -------------------------------------------------- 
     ***********************************************************************************************************************/
 
-    handleOffMap() {
+    handleRespawn(dead=false) {
         // If below world
         if(my.sprite.player.y > this.scale.height) {
-            my.sprite.player.setPosition(this.lastSafePosition[0], this.lastSafePosition[1]); // respawn at spawn point
+            dead = true; // set dead to true
+        }
+
+        if (dead) {
+            // If dead, respawn at last safe position
+            my.sprite.player.setPosition(this.spawnPoint[0], this.spawnPoint[1]); // respawn at last safe position
             my.sprite.player.setVelocity(0, 0); // reset velocity
             my.sprite.player.setAcceleration(0, 0); // reset acceleration
             my.sprite.player.setDrag(0, 0); // reset drag
@@ -673,17 +677,6 @@ class Platformer extends Phaser.Scene {
             this.time.delayedCall(200, () => {
                 this.inputLocked = false;
             });
-        }
-    }
-
-    updateSpawn(groundedNow) {
-        if (groundedNow) {
-            const tile = this.groundLayer.getTileAtWorldXY(my.sprite.player.x, my.sprite.player.y + my.sprite.player.height / 2);
-            //console.log(tile.properties);
-            if (tile && tile.properties.safeGround) {
-                this.lastSafePosition = [my.sprite.player.x, my.sprite.player.y];
-                //console.log("Safe spawn point updated to: ", this.lastSafePosition);
-            }
         }
     }
 }
