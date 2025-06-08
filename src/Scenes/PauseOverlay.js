@@ -21,6 +21,9 @@ class PauseOverlay extends Phaser.Scene {
         this.add.bitmapText(centerX, centerY - 60, 'myFont', 'Game Paused', 24)
             .setOrigin(0.5);
 
+        // High Score Display
+        this.displayHighScore = this.add.bitmapText(50, 50, 'myFont', 'High Score: ' + (parseInt(localStorage.getItem('highScore')) || 0), 16);
+
         // Helper function to create buttons with highlight background
         const makeButton = (text, y, callback) => {
             const label = this.add.bitmapText(centerX, y, 'myFont', text, 16).setOrigin(0.5);
