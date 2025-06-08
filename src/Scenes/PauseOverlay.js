@@ -24,6 +24,11 @@ class PauseOverlay extends Phaser.Scene {
         // High Score Display
         this.displayHighScore = this.add.bitmapText(50, 50, 'myFont', 'High Score: ' + (parseInt(localStorage.getItem('highScore')) || 0), 16);
 
+        // Click sfx
+        this.click = this.sound.add('uiClick', {
+            volume: 0.2
+        });
+
         // Helper function to create buttons with highlight background
         const makeButton = (text, y, callback) => {
             const label = this.add.bitmapText(centerX, y, 'myFont', text, 16).setOrigin(0.5);
@@ -36,6 +41,7 @@ class PauseOverlay extends Phaser.Scene {
             bg.setVisible(false);
 
             label.setInteractive({ useHandCursor: true })
+                .on('pointerdown', () => this.click.play()) // Play button click sound
                 .on('pointerdown', callback)
                 .on('pointerover', () => bg.setVisible(true))
                 .on('pointerout', () => bg.setVisible(false));
@@ -49,12 +55,13 @@ class PauseOverlay extends Phaser.Scene {
 
         // Resume with esc key
         this.input.keyboard.on('keydown-ESC', () => {
+            this.click.play();                         // Play button click sound
             this.scene.stop();                         // Stop pause overlay
             this.scene.resume(this.gameSceneKey);      // Resume the paused game scene
         });
 
         // Exit button
-        makeButton('[ Exit to Menu ]', centerY + 120, () => {
+        makeButton('[ Return to Menu ]', centerY + 120, () => {
             this.scene.stop(this.gameSceneKey);        // Stop the game scene
             this.scene.stop();                         // Stop this overlay
             this.scene.start('menu');                  // Go to main menu

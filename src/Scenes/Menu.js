@@ -10,7 +10,13 @@ class Menu extends Phaser.Scene {
         // Title
         this.add.bitmapText(centerX, centerY - 100, 'myFont', 'Forest of Advantis', 24).setOrigin(0.5);
 
+        // High Score Display
         this.displayHighScore = this.add.bitmapText(50, 50, 'myFont', 'High Score: ' + (parseInt(localStorage.getItem('highScore')) || 0), 16);
+
+        // Click sfx
+        this.click = this.sound.add('uiClick', {
+            volume: 0.2
+        });
 
         // Helper function to create buttons with highlight background
         const makeButton = (text, y, callback) => {
@@ -24,6 +30,7 @@ class Menu extends Phaser.Scene {
             bg.setVisible(false);
 
             label.setInteractive({ useHandCursor: true })
+                .on('pointerdown', () => this.click.play()) // Play button click sound
                 .on('pointerdown', callback)
                 .on('pointerover', () => bg.setVisible(true))
                 .on('pointerout', () => bg.setVisible(false));
