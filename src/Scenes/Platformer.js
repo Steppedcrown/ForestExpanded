@@ -5,29 +5,41 @@ class Platformer extends Phaser.Scene {
 
     init() {
         // variables and settings
-        this.ACCELERATION = 500;
-        this.DRAG = 6 * this.ACCELERATION;    // DRAG < ACCELERATION = icy slide
-        this.physics.world.gravity.y = 1500;
-        this.JUMP_VELOCITY = -500;
-        this.PARTICLE_VELOCITY = 50;
-        this.SCALE = 2.0;
+        this.ACCELERATION = 500; // acceleration of the player
+        this.DRAG = 6 * this.ACCELERATION; // DRAG < ACCELERATION = icy slide
+        this.physics.world.gravity.y = 1500; // gravity
+        this.JUMP_VELOCITY = -500; // jump velocity
+        this.PARTICLE_VELOCITY = 50; // velocity of the particles
+        this.SCALE = 2.0; // scale of the game
         this.MAX_VELOCITY = 300; // max speed
 
+        // Spawn points
+        this.spawnPoint = [75, 245]; // beginning spawn point
+        //this.spawnPoint = [1200, 0]; // end spawn point
+
+        // Game states
         this.isGameOver = false;
         this.wasGrounded = false;
         this.inputLocked = false;
-        this.spawnPoint = [75, 245]; // default spawn point
-        //this.spawnPoint = [1200, 0]; // end spawn point
+
+        // Coyote time
         this.coyoteTime = 0;
         this.COYOTE_DURATION = 100; // milliseconds of grace period
+
+        // Jump buffer
         this.jumpBufferRemaining = 0;
         this.hasJumped = false; // flag to check if the player has jumped
         this.JUMP_BUFFER_DURATION = 100; // milliseconds to buffer a jump input
+
+        // Variable jump
         this.JUMP_CUTOFF_VELOCITY = -200;  // Control how "short" a short hop is
-        this.UI_DEPTH = 99; // UI depth for buttons and text
+
+        // Movement SFX cooldowns
         this.walkStepCooldown = 0;
         this.STEP_INTERVAL = 200; // ms between steps
 
+        // Global depths
+        this.UI_DEPTH = 99; // UI depth for buttons and text
     }
 
     preload() {
@@ -39,8 +51,6 @@ class Platformer extends Phaser.Scene {
         this.map = this.add.tilemap("platformer-level-1", 18, 18, 80, 20);
 
         // Add a tileset to the map
-        // First parameter: name we gave the tileset in Tiled
-        // Second parameter: key for the tilesheet (from this.load.image in Load.js)
         this.tileset = this.map.addTilesetImage("kenny_tilemap_packed", "tilemap_tiles");
 
         // Create layers
@@ -71,21 +81,14 @@ class Platformer extends Phaser.Scene {
         my.sprite.player.setDepth(1);
         my.sprite.player.setOrigin(0.5, 1); // Origin to center bottom
 
+        // Enable collision handling
+        this.physics.add.collider(my.sprite.player, this.groundLayer);
 
         // Bounds
         this.physics.world.setBounds(0, -0, this.map.widthInPixels, this.map.heightInPixels);
         this.physics.world.setBoundsCollision(true, true, true, false);  // left, right, top, bottom
         my.sprite.player.setCollideWorldBounds(true);
         this.lastSafePosition = this.spawnPoint;
-
-        // Bounds
-        this.physics.world.setBoundsCollision(true, true, true, false);  // left, right, top, bottom
-        my.sprite.player.setCollideWorldBounds(true);
-        this.lastSafePosition = this.spawnPoint;
-
-
-        // Enable collision handling
-        this.physics.add.collider(my.sprite.player, this.groundLayer);
 
         // Add camera
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
@@ -96,10 +99,58 @@ class Platformer extends Phaser.Scene {
         const bgColor = this.cache.tilemap.get("platformer-level-1").data.backgroundcolor;
         if (bgColor) this.cameras.main.setBackgroundColor(bgColor);
 
+        // Set up game
         this.addButtons();
         this.setupScore();
         this.addObjects();
+        this.setupInput();
+        this.setupAudio();
+        this.setupVFX();
+    }
 
+    update(time, delta) {
+        const groundedNow = my.sprite.player.body.blocked.down;
+        let isWalking = this.handleMovement(groundedNow); // Handle player movement and return if walking
+
+        // Play walking sound
+        this.movementSFX(delta, isWalking, groundedNow);
+
+        // Add juice
+        this.characterJuice(8, 0.9); // Lean angle, squash factor
+
+        // Handle jumping
+        this.handleJump(groundedNow, delta);
+
+        // Handle landing VFX
+        this.landingVFX(groundedNow);
+
+        // Check for off-map
+        this.handleOffMap();
+
+        // Update respawn point
+        this.updateSpawn(groundedNow);
+
+        // Update for next frame
+        this.wasGrounded = groundedNow;
+    }
+
+    /*************************************************************************************************************** 
+    -------------------------------------------------- GAME SETUP --------------------------------------------------
+    ***************************************************************************************************************/
+    setupInput() {
+        // Input handling
+        cursors = this.input.keyboard.createCursorKeys();
+        this.dKey = this.input.keyboard.addKey('D');
+        this.aKey = this.input.keyboard.addKey('A');
+        this.spaceKey = this.input.keyboard.addKey('SPACE');
+
+        // Reset browser cache
+        this.input.keyboard.on('keydown-P', (event) => {
+            localStorage.setItem('highScore', 0);
+        }, this);
+    }
+
+    setupAudio() {
         // Store audio
         this.walkSound = this.sound.add('walkSound', {
             loop: true
@@ -117,12 +168,16 @@ class Platformer extends Phaser.Scene {
             loop: true
         });
 
-        // Input handling
-        cursors = this.input.keyboard.createCursorKeys();
-        this.dKey = this.input.keyboard.addKey('D');
-        this.aKey = this.input.keyboard.addKey('A');
-        this.spaceKey = this.input.keyboard.addKey('SPACE');
+        // Start background music
+        let bgMusic = this.registry.get('bgMusic') || false;
+        this.registry.set('bgMusic', bgMusic); // Set if music is playing
+        if (!bgMusic) {
+            this.backgroundMusic.play();
+            this.registry.set('bgMusic', true); // Set music is playing
+        }
+    }
 
+    setupVFX() {
         // Movement vfx
         my.vfx.walking = this.add.particles(0, 0, "kenny-particles", {
             frame: ['smoke_03.png', 'smoke_09.png'],
@@ -179,208 +234,6 @@ class Platformer extends Phaser.Scene {
         this.createBubbles(150, 240, 315, 375);
         this.createBubbles(1050, 1270, 370, 375);
         this.createBubbles(1275, 1375, 305, 375);
-
-        // Reset browser cache
-        this.input.keyboard.on('keydown-P', (event) => {
-            localStorage.setItem('highScore', 0);
-        }, this);
-
-        // Start background music
-        let bgMusic = this.registry.get('bgMusic') || false;
-        this.registry.set('bgMusic', bgMusic); // Set if music is playing
-        if (!bgMusic) {
-            this.backgroundMusic.play();
-            this.registry.set('bgMusic', true); // Set music is playing
-        }
-    }
-
-    update(time, delta) {
-        const groundedNow = my.sprite.player.body.blocked.down;
-        let isWalking = false;
-
-        if (!this.inputLocked) {
-            if(cursors.left.isDown || this.aKey.isDown) {
-                if (my.sprite.player.body.velocity.x > 0) my.sprite.player.setVelocityX(my.sprite.player.body.velocity.x / 4);
-                my.sprite.player.setAccelerationX(-this.ACCELERATION);
-                my.sprite.player.resetFlip();
-                my.sprite.player.anims.play('walk', true);
-                // Particle following
-                my.vfx.walking.startFollow(my.sprite.player, my.sprite.player.displayWidth/2-10, my.sprite.player.displayHeight/2-15, false);
-                my.vfx.walking.setParticleSpeed(this.PARTICLE_VELOCITY, 0);
-                // Only play smoke effect if touching the ground
-                if (my.sprite.player.body.blocked.down) {
-                    my.vfx.walking.start();
-                } 
-                isWalking = true;
-
-            } else if(cursors.right.isDown || this.dKey.isDown) {
-                if (my.sprite.player.body.velocity.x < 0) my.sprite.player.setVelocityX(my.sprite.player.body.velocity.x / 4);
-                my.sprite.player.setAccelerationX(this.ACCELERATION);
-                my.sprite.player.setFlip(true, false);
-                my.sprite.player.anims.play('walk', true);
-                // Particle following
-                my.vfx.walking.startFollow(my.sprite.player, my.sprite.player.displayWidth/2-10, my.sprite.player.displayHeight/2-15, false);
-                my.vfx.walking.setParticleSpeed(this.PARTICLE_VELOCITY, 0);
-                // Only play smoke effect if touching the ground
-                if (my.sprite.player.body.blocked.down) {
-                    my.vfx.walking.start();
-                }
-                isWalking = true;
-
-            } else {
-                // Set acceleration to 0 and have DRAG take over
-                my.sprite.player.setAccelerationX(0);
-                my.sprite.player.setDragX(this.DRAG);
-                //my.sprite.player.setVelocityX(0); // stop horizontal movement
-                my.sprite.player.anims.play('idle');
-                my.vfx.walking.stop();
-            } 
-        } else {
-            // Set acceleration to 0 and have DRAG take over
-            my.sprite.player.setAccelerationX(0);
-            my.sprite.player.setDragX(this.DRAG);
-            //my.sprite.player.setVelocityX(0); // stop horizontal movement
-            my.sprite.player.anims.play('idle');
-            my.vfx.walking.stop();
-        }
-
-        // Movement sfx
-        this.walkStepCooldown -= delta;
-        if (isWalking && groundedNow) {
-            if (this.walkStepCooldown <= 0) {
-                // Reset cooldown
-                this.walkStepCooldown = this.STEP_INTERVAL;
-
-                // Restart sound
-                this.walkSound.stop(); // reset if already playing
-                this.walkSound.play();
-
-                // Reset volume to 0 and tween it in and out
-                this.walkSound.setVolume(0.35);
-
-                this.tweens.add({
-                    targets: this.walkSound,
-                    volume: 0,
-                    duration: 300,
-                    ease: 'Sine.easeInOut'
-                });
-            }
-        }
-
-        // Lean affect
-        const velocityX = my.sprite.player.body.velocity.x;
-        const maxLeanAngle = 10; // degrees to lean at full speed
-        const maxSquash = 0.9;   // horizontal squash factor
-
-        // Normalize velocity to [-1, 1] based on max speed
-        const speedRatio = Phaser.Math.Clamp(velocityX / this.MAX_VELOCITY, -1, 1);
-
-        // Lean the player
-        my.sprite.player.setRotation(Phaser.Math.DegToRad(maxLeanAngle * speedRatio));
-
-        // Slight horizontal squash (increase scaleX when leaning)
-        my.sprite.player.setScale(1 - Math.abs(speedRatio) * (1 - maxSquash), my.sprite.player.scaleY); 
-
-        if (groundedNow && !this.wasGrounded) {
-            // Trigger landing VFX only on landing
-            my.vfx.landing.x = my.sprite.player.x;
-            my.vfx.landing.y = my.sprite.player.y + my.sprite.player.displayHeight - 20;
-            my.vfx.landing.start();
-            this.time.delayedCall(10, () => {
-                my.vfx.landing.stop(); // stop the jump vfx
-            });
-
-            // Play landing sound
-            //this.jumpSound.play();
-
-            // Stretch and squash effect
-            my.sprite.player.setScale(0.8, 1.2);  // squash down
-
-            this.tweens.add({
-                targets: my.sprite.player,
-                scaleX: 1,
-                scaleY: 1,
-                duration: 200,
-                ease: 'Bounce.easeOut'
-            });
-        }
-
-        // Update for next frame
-        this.wasGrounded = groundedNow;
-
-        // Track how many consecutive frames the player is grounded
-        if (groundedNow) {
-            this.coyoteTime = this.COYOTE_DURATION;
-            this.hasJumped = false;
-        } else {
-            this.groundedFrames = 0;
-            this.coyoteTime -= delta;
-        }
-
-        if (Phaser.Input.Keyboard.JustDown(cursors.up) || Phaser.Input.Keyboard.JustDown(this.spaceKey)) this.jumpBufferRemaining = this.JUMP_BUFFER_DURATION;
-        else this.jumpBufferRemaining -= delta; // decrement jump buffer time
-
-        // player jump
-        // note that we need body.blocked rather than body.touching b/c the former applies to tilemap tiles and the latter to the "ground"
-        if(!groundedNow) {
-            my.sprite.player.anims.play('jump');
-        }
-        if(!this.inputLocked && this.coyoteTime > 0 && this.jumpBufferRemaining > 0 && !this.hasJumped) {
-            this.hasJumped = true; // set jump flag to true
-            this.coyoteTime = 0; // reset coyote time
-            this.jumpBufferRemaining = 0; // reset jump buffer time
-            my.sprite.player.body.setVelocityY(this.JUMP_VELOCITY);
-
-            // Play jump vfx
-            my.vfx.jumping.x = my.sprite.player.x; // center the particle on the player
-            my.vfx.jumping.y = my.sprite.player.y + my.sprite.player.displayHeight - 20; // center the particle on the player
-            my.vfx.jumping.start();
-            this.time.delayedCall(10, () => {
-                my.vfx.jumping.stop(); // stop the jump vfx
-            });
-
-            // Play jump sound
-            this.jumpSound.play();
-
-            // Stretch and squash effect
-            my.sprite.player.setScale(1.2, 0.8);  // stretch up, squash wide
-
-            this.tweens.add({
-                targets: my.sprite.player,
-                scaleX: 1,
-                scaleY: 1,
-                duration: 200,
-                ease: 'Sine.easeOut'
-            });
-
-        }
-
-        // Cut jump short if player releases key while still rising
-        if (my.sprite.player.body.velocity.y < 0 && !(cursors.up.isDown || this.spaceKey.isDown)) {
-            // Cut the jump
-            my.sprite.player.setVelocityY(Math.max(my.sprite.player.body.velocity.y, this.JUMP_CUTOFF_VELOCITY));
-        }
-
-        // If below world
-        if(my.sprite.player.y > this.scale.height) {
-            my.sprite.player.setPosition(this.lastSafePosition[0], this.lastSafePosition[1]); // respawn at spawn point
-            my.sprite.player.setVelocity(0, 0); // reset velocity
-            my.sprite.player.setAcceleration(0, 0); // reset acceleration
-            my.sprite.player.setDrag(0, 0); // reset drag
-            this.inputLocked = true;
-            this.time.delayedCall(200, () => {
-                this.inputLocked = false;
-            });
-        }
-
-        if (groundedNow) {
-            const tile = this.groundLayer.getTileAtWorldXY(my.sprite.player.x, my.sprite.player.y + my.sprite.player.height / 2);
-            //console.log(tile.properties);
-            if (tile && tile.properties.safeGround) {
-                this.lastSafePosition = [my.sprite.player.x, my.sprite.player.y];
-                //console.log("Safe spawn point updated to: ", this.lastSafePosition);
-            }
-        }
     }
 
     setupScore() {
@@ -388,9 +241,9 @@ class Platformer extends Phaser.Scene {
         let playerScore = this.registry.get('playerScore') || 0;
         this.registry.set('playerScore', playerScore);
         
-        let xPos = 1140;
-        let yPos = 490;
-        let fontSize = 12;
+        let xPos = 1090;
+        let yPos = 495;
+        let fontSize = 10;
         // Add score text
         this.displayScore = this.add.bitmapText(xPos, yPos, 'myFont', 'Score: ' + this.registry.get('playerScore'), fontSize);
         this.displayScore.setScrollFactor(0); // Make it not scroll with the camera
@@ -585,6 +438,10 @@ class Platformer extends Phaser.Scene {
         });
     }
 
+    /**************************************************************************************************************************  
+    -------------------------------------------------- END OF GAME FUNCTIONS -------------------------------------------------- 
+    **************************************************************************************************************************/
+
     gameOver(text="Game Over") {
         this.buttonRect.setVisible(true); // Show the overlay
 
@@ -620,5 +477,216 @@ class Platformer extends Phaser.Scene {
         this.backgroundMusic.setVolume(0.4); // Reset background music volume
         this.scene.stop("level1");
         this.scene.start("level1");
+    }
+
+    /************************************************************************************************************* 
+    -------------------------------------------------- MOVEMENT -------------------------------------------------- 
+    *************************************************************************************************************/
+
+    handleMovement(groundedNow) {
+        let isWalking = false; // Track if the player is walking
+        if (!this.inputLocked) {
+            if(cursors.left.isDown || this.aKey.isDown) {
+                if (my.sprite.player.body.velocity.x > 0) my.sprite.player.setVelocityX(my.sprite.player.body.velocity.x / 4);
+                my.sprite.player.setAccelerationX(-this.ACCELERATION);
+                my.sprite.player.resetFlip();
+                my.sprite.player.anims.play('walk', true);
+                // Particle following
+                my.vfx.walking.startFollow(my.sprite.player, my.sprite.player.displayWidth/2-10, my.sprite.player.displayHeight/2-15, false);
+                my.vfx.walking.setParticleSpeed(this.PARTICLE_VELOCITY, 0);
+                // Only play smoke effect if touching the ground
+                if (my.sprite.player.body.blocked.down) {
+                    my.vfx.walking.start();
+                } 
+                isWalking = true;
+
+            } else if(cursors.right.isDown || this.dKey.isDown) {
+                if (my.sprite.player.body.velocity.x < 0) my.sprite.player.setVelocityX(my.sprite.player.body.velocity.x / 4);
+                my.sprite.player.setAccelerationX(this.ACCELERATION);
+                my.sprite.player.setFlip(true, false);
+                my.sprite.player.anims.play('walk', true);
+                // Particle following
+                my.vfx.walking.startFollow(my.sprite.player, my.sprite.player.displayWidth/2-10, my.sprite.player.displayHeight/2-15, false);
+                my.vfx.walking.setParticleSpeed(this.PARTICLE_VELOCITY, 0);
+                // Only play smoke effect if touching the ground
+                if (my.sprite.player.body.blocked.down) {
+                    my.vfx.walking.start();
+                }
+                isWalking = true;
+
+            } else {
+                // Set acceleration to 0 and have DRAG take over
+                my.sprite.player.setAccelerationX(0);
+                my.sprite.player.setDragX(this.DRAG);
+                //my.sprite.player.setVelocityX(0); // stop horizontal movement
+                my.sprite.player.anims.play('idle');
+                my.vfx.walking.stop();
+            } 
+        } else {
+            // Set acceleration to 0 and have DRAG take over
+            my.sprite.player.setAccelerationX(0);
+            my.sprite.player.setDragX(this.DRAG);
+            //my.sprite.player.setVelocityX(0); // stop horizontal movement
+            my.sprite.player.anims.play('idle');
+            my.vfx.walking.stop();
+        }
+        return isWalking; // Return whether the player is walking
+    }
+
+    /****************************************************************************************************************** 
+    -------------------------------------------------- JUMPING + VFX -------------------------------------------------- 
+    ******************************************************************************************************************/
+
+    handleJump(groundedNow, delta) {
+               // Track how many consecutive frames the player is grounded
+        if (groundedNow) {
+            this.coyoteTime = this.COYOTE_DURATION;
+            this.hasJumped = false;
+        } else {
+            this.groundedFrames = 0;
+            this.coyoteTime -= delta;
+        }
+
+        if (Phaser.Input.Keyboard.JustDown(cursors.up) || Phaser.Input.Keyboard.JustDown(this.spaceKey)) this.jumpBufferRemaining = this.JUMP_BUFFER_DURATION;
+        else this.jumpBufferRemaining -= delta; // decrement jump buffer time
+
+        // player jump
+        // note that we need body.blocked rather than body.touching b/c the former applies to tilemap tiles and the latter to the "ground"
+        if(!groundedNow) {
+            my.sprite.player.anims.play('jump');
+        }
+        if(!this.inputLocked && this.coyoteTime > 0 && this.jumpBufferRemaining > 0 && !this.hasJumped) {
+            this.hasJumped = true; // set jump flag to true
+            this.coyoteTime = 0; // reset coyote time
+            this.jumpBufferRemaining = 0; // reset jump buffer time
+            my.sprite.player.body.setVelocityY(this.JUMP_VELOCITY);
+
+            // Play jump vfx
+            my.vfx.jumping.x = my.sprite.player.x; // center the particle on the player
+            my.vfx.jumping.y = my.sprite.player.y + my.sprite.player.displayHeight - 20; // center the particle on the player
+            my.vfx.jumping.start();
+            this.time.delayedCall(10, () => {
+                my.vfx.jumping.stop(); // stop the jump vfx
+            });
+
+            // Play jump sound
+            this.jumpSound.play();
+
+            // Stretch and squash effect
+            my.sprite.player.setScale(1.2, 0.8);  // stretch up, squash wide
+
+            this.tweens.add({
+                targets: my.sprite.player,
+                scaleX: 1,
+                scaleY: 1,
+                duration: 200,
+                ease: 'Sine.easeOut'
+            });
+
+        }
+
+        // Cut jump short if player releases key while still rising
+        if (my.sprite.player.body.velocity.y < 0 && !(cursors.up.isDown || this.spaceKey.isDown)) {
+            // Cut the jump
+            my.sprite.player.setVelocityY(Math.max(my.sprite.player.body.velocity.y, this.JUMP_CUTOFF_VELOCITY));
+        }
+    }
+
+    /************************************************************************************************************* 
+    -------------------------------------------------- JUCINESS -------------------------------------------------- 
+    *************************************************************************************************************/
+
+    movementSFX(delta, isWalking, groundedNow) {
+        // Movement sfx
+        this.walkStepCooldown -= delta;
+        if (isWalking && groundedNow) {
+            if (this.walkStepCooldown <= 0) {
+                // Reset cooldown
+                this.walkStepCooldown = this.STEP_INTERVAL;
+
+                // Restart sound
+                this.walkSound.stop(); // reset if already playing
+                this.walkSound.play();
+
+                // Reset volume to 0 and tween it in and out
+                this.walkSound.setVolume(0.35);
+
+                this.tweens.add({
+                    targets: this.walkSound,
+                    volume: 0,
+                    duration: 300,
+                    ease: 'Sine.easeInOut'
+                });
+            }
+        }
+    }
+
+    landingVFX(groundedNow) {
+        if (groundedNow && !this.wasGrounded) {
+            // Trigger landing VFX only on landing
+            my.vfx.landing.x = my.sprite.player.x;
+            my.vfx.landing.y = my.sprite.player.y + my.sprite.player.displayHeight - 20;
+            my.vfx.landing.start();
+            this.time.delayedCall(10, () => {
+                my.vfx.landing.stop(); // stop the jump vfx
+            });
+
+            // Play landing sound
+            //this.jumpSound.play();
+
+            // Stretch and squash effect
+            my.sprite.player.setScale(0.8, 1.2);  // squash down
+
+            this.tweens.add({
+                targets: my.sprite.player,
+                scaleX: 1,
+                scaleY: 1,
+                duration: 200,
+                ease: 'Bounce.easeOut'
+            });
+        }
+    }
+
+    characterJuice(maxLeanAngle, maxSquash) {
+        // Lean affect
+        const velocityX = my.sprite.player.body.velocity.x;
+
+        // Normalize velocity to [-1, 1] based on max speed
+        const speedRatio = Phaser.Math.Clamp(velocityX / this.MAX_VELOCITY, -1, 1);
+
+        // Lean the player
+        my.sprite.player.setRotation(Phaser.Math.DegToRad(maxLeanAngle * speedRatio));
+
+        // Slight horizontal squash (increase scaleX when leaning)
+        my.sprite.player.setScale(1 - Math.abs(speedRatio) * (1 - maxSquash), my.sprite.player.scaleY); 
+    }
+
+    /*********************************************************************************************************************** 
+    -------------------------------------------------- OFF MAP + SPAWNING -------------------------------------------------- 
+    ***********************************************************************************************************************/
+
+    handleOffMap() {
+        // If below world
+        if(my.sprite.player.y > this.scale.height) {
+            my.sprite.player.setPosition(this.lastSafePosition[0], this.lastSafePosition[1]); // respawn at spawn point
+            my.sprite.player.setVelocity(0, 0); // reset velocity
+            my.sprite.player.setAcceleration(0, 0); // reset acceleration
+            my.sprite.player.setDrag(0, 0); // reset drag
+            this.inputLocked = true;
+            this.time.delayedCall(200, () => {
+                this.inputLocked = false;
+            });
+        }
+    }
+
+    updateSpawn(groundedNow) {
+        if (groundedNow) {
+            const tile = this.groundLayer.getTileAtWorldXY(my.sprite.player.x, my.sprite.player.y + my.sprite.player.height / 2);
+            //console.log(tile.properties);
+            if (tile && tile.properties.safeGround) {
+                this.lastSafePosition = [my.sprite.player.x, my.sprite.player.y];
+                //console.log("Safe spawn point updated to: ", this.lastSafePosition);
+            }
+        }
     }
 }
