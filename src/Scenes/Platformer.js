@@ -88,7 +88,6 @@ class Platformer extends Phaser.Scene {
         this.physics.world.setBounds(0, -0, this.map.widthInPixels, this.map.heightInPixels);
         this.physics.world.setBoundsCollision(true, true, true, false);  // left, right, top, bottom
         my.sprite.player.setCollideWorldBounds(true);
-        this.lastSafePosition = this.spawnPoint;
 
         // Add camera
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
@@ -125,10 +124,7 @@ class Platformer extends Phaser.Scene {
         this.landingVFX(groundedNow);
 
         // Check for off-map
-        this.handleOffMap();
-
-        // Update respawn point
-        this.updateSpawn(groundedNow);
+        this.handleRespawn();
 
         // Update for next frame
         this.wasGrounded = groundedNow;
@@ -236,9 +232,9 @@ class Platformer extends Phaser.Scene {
         let playerScore = this.registry.get('playerScore') || 0;
         this.registry.set('playerScore', playerScore);
         
-        let xPos = 1090;
-        let yPos = 495;
-        let fontSize = 10;
+        let xPos = 1125;
+        let yPos = 505;
+        let fontSize = 12;
         // Add score text
         this.displayScore = this.add.bitmapText(xPos, yPos, 'myFont', 'Score: ' + this.registry.get('playerScore'), fontSize);
         this.displayScore.setScrollFactor(0); // Make it not scroll with the camera
@@ -261,11 +257,17 @@ class Platformer extends Phaser.Scene {
     addButtons() {
         // Restart game button
         // Create a semi-transparent overlay
-        this.buttonRect = this.add.rectangle(this.scale.width/2, this.scale.height/2 + 20, 200, 60, 0x000000, 0.5);
-        this.buttonRect.setOrigin(0.5, 0.5);
-        this.buttonRect.setScrollFactor(0); // Make it not scroll with the camera
-        this.buttonRect.setVisible(false); // Hide the rectangle initially
-        this.buttonRect.setDepth(this.UI_DEPTH); // Ensure it appears above other elements
+        this.buttonRect = this.add.rectangle(this.scale.width/2, this.scale.height/2 + 20, 200, 60, 0x000000, 0.5)
+        .setOrigin(0.5, 0.5)
+        .setScrollFactor(0) // Make it not scroll with the camera
+        .setVisible(false) // Hide the rectangle initially
+        .setDepth(this.UI_DEPTH); // Ensure it appears above other elements
+
+        this.buttonRect2 = this.add.rectangle(this.scale.width/2, this.scale.height/2 + 100, 200, 60, 0x000000, 0.5)
+        .setOrigin(0.5, 0.5)
+        .setScrollFactor(0) // Make it not scroll with the camera
+        .setVisible(false) // Hide the rectangle initially
+        .setDepth(this.UI_DEPTH); // Ensure it appears above other elements
 
         // Display "Game Over" text
         this.gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2 - 50, "Game over", {
@@ -273,12 +275,12 @@ class Platformer extends Phaser.Scene {
             color: "#ffffff",
             stroke: "#000000",
             strokeThickness: 5
-        }).setOrigin(0.5);
-        this.gameOverText.setVisible(false); // Hide the text initially
-        this.gameOverText.setScrollFactor(0); // Make it not scroll with the camera
+        }).setOrigin(0.5)
+        .setVisible(false) // Hide the text initially
+        .setScrollFactor(0); // Make it not scroll with the camera
 
         // Restart button
-        this.restartButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 20, "Play Again", {
+        this.restartButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 100, "Play Again", {
             fontSize: "24px",
             backgroundColor: "#ffffff",
             color: "#000000",
@@ -291,13 +293,33 @@ class Platformer extends Phaser.Scene {
                 volume: 0.5,
                 loop: false
             });
-            this.restartGame();
-        });
-        this.restartButton.setOrigin(0.5, 0.5);
-        this.restartButton.setScrollFactor(0); // Make it not scroll with the camera
-        this.restartButton.setVisible(false); // Hide the button initially
-        this.restartButton.setInteractive(false); // Disable interaction initially
-        this.restartButton.setDepth(this.UI_DEPTH); // Ensure it appears above other elements
+            this.restartGame(true);
+        }).setOrigin(0.5, 0.5)
+        .setScrollFactor(0) // Make it not scroll with the camera
+        .setVisible(false) // Hide the button initially
+        .setInteractive(false) // Disable interaction initially
+        .setDepth(this.UI_DEPTH); // Ensure it appears above other elements
+
+        // Continue button
+        this.continueButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 20, "Resume", {
+            fontSize: "24px",
+            backgroundColor: "#ffffff",
+            color: "#000000",
+            padding: { x: 49.5, y: 10 } // Add padding around the text
+        })
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => {
+            // Play click sound
+            this.sound.play('uiClick', {
+                volume: 0.5,
+                loop: false
+            });
+            this.restartGame(false);
+        }).setOrigin(0.5, 0.5)
+        .setScrollFactor(0) // Make it not scroll with the camera
+        .setVisible(false) // Hide the button initially
+        .setInteractive(false) // Disable interaction initially
+        .setDepth(this.UI_DEPTH); // Ensure it appears above other elements
     }
 
     addObjects() {
@@ -320,7 +342,7 @@ class Platformer extends Phaser.Scene {
             frame: 67
         });
 
-        this.endFlag = this.map.createFromObjects("Objects", {
+        this.checkpoints = this.map.createFromObjects("Objects", {
             name: "flag",
             key: "tilemap_sheet",
             frame: 111
@@ -331,13 +353,13 @@ class Platformer extends Phaser.Scene {
         // them into Arcade Physics sprites (STATIC_BODY, so they don't move) 
         this.physics.world.enable(this.coins, Phaser.Physics.Arcade.STATIC_BODY);
         this.physics.world.enable(this.diamonds, Phaser.Physics.Arcade.STATIC_BODY);
-        this.physics.world.enable(this.endFlag, Phaser.Physics.Arcade.STATIC_BODY);
+        this.physics.world.enable(this.checkpoints, Phaser.Physics.Arcade.STATIC_BODY);
 
         // Create a Phaser group out of the array this.coins
         // This will be used for collision detection below.
         this.coinGroup = this.add.group(this.coins);
         this.diamondGroup = this.add.group(this.diamonds);
-        this.endFlag = this.add.group(this.endFlag);
+        this.checkpoints = this.add.group(this.checkpoints);
 
         // TODO: Add coin collision handler
         // Handle collision detection with coins
@@ -382,12 +404,36 @@ class Platformer extends Phaser.Scene {
             });
             this.updateScore(5); // increment score
         });
-        this.physics.add.overlap(my.sprite.player, this.endFlag, (player, flag) => {
-            if (!this.isGameOver) {
-                this.isGameOver = true; // prevent multiple triggers
-                console.log("You reached the end! Final Score: " + this.score);
-                this.gameOver("You win!");
+        this.physics.add.overlap(my.sprite.player, this.checkpoints, (player, flag) => {
+            if (this.spawnPoint[0] != flag.x && this.spawnPoint[1] != flag.y) { // check if this is a new flag
+                this.spawnPoint = [flag.x, flag.y]; // Update spawn point to this flag
+                this.tweens.add({
+                    targets: flag,
+                    y: flag.y - 8,
+                    duration: 700,
+                    ease: 'Linear'
+                });
+                flag.raised = true; // Mark this flag as raised
+                this.checkpoints.getChildren().forEach(f => {
+                    if (f !== flag && f.raised) {
+                        // Lower all other flags
+                        this.tweens.add({
+                            targets: f,
+                            y: f.y + 8,
+                            duration: 700,
+                            ease: 'Linear'
+                        });
+                        f.raised = false; // Mark this flag as lowered
+                    }
+                });
+            }
+            if (flag.data.values.endFlag) {
+                if (!this.isGameOver) {
+                    this.isGameOver = true; // prevent multiple triggers
+                    console.log("You reached the end! Final Score: " + this.registry.get('playerScore'));
+                    this.gameOver("You win!");
 
+                }
             }
         });
 
@@ -395,7 +441,7 @@ class Platformer extends Phaser.Scene {
         this.coinGroup.getChildren().forEach(coin => {
             coin.anims.play('coinSpin');
         });
-        this.endFlag.getChildren().forEach(flag => {
+        this.checkpoints.getChildren().forEach(flag => {
             flag.anims.play('flagWave');
         });
 
@@ -439,12 +485,15 @@ class Platformer extends Phaser.Scene {
 
     gameOver(text="Game Over") {
         this.buttonRect.setVisible(true); // Show the overlay
+        this.buttonRect2.setVisible(true); // Show the second overlay
 
         this.gameOverText.setText(text); // Set the text
         this.gameOverText.setVisible(true); // Show the text
 
         this.restartButton.setVisible(true); // Show the button
         this.restartButton.setInteractive(true); // Enable interaction
+        this.continueButton.setVisible(true); // Show the continue button
+        this.continueButton.setInteractive(true); // Enable interaction
         this.inputLocked = true;
 
         // Play level complete sound
@@ -454,26 +503,37 @@ class Platformer extends Phaser.Scene {
         }
     }
 
-    restartGame() {
+    restartGame(restart) {
         this.buttonRect.setVisible(false); // Hide the overlay
+        this.buttonRect2.setVisible(false); // Hide the second overlay
         
         this.gameOverText.setVisible(false); // Hide the text
 
         this.restartButton.setVisible(false); // Hide the button
         this.restartButton.setInteractive(false); // Disable interaction
+        this.continueButton.setVisible(false); // Hide the continue button
+        this.continueButton.setInteractive(false); // Disable interaction
 
         let playerScore = this.registry.get('playerScore');
         // Check if the player score is greater than the high score
         if (playerScore > parseInt(localStorage.getItem('highScore')) || !localStorage.getItem('highScore')) {
             localStorage.setItem('highScore', playerScore);
-            this.displayHighScore.setText('High: ' + parseInt(localStorage.getItem('highScore')));
         }
 
-        this.registry.set('playerScore', 0);
         this.levelCompleteSound.stop(); // Stop level complete sound
         this.registry.get('bgMusic').setVolume(0.4); // Reset background music volume
-        this.scene.stop("level1");
-        this.scene.start("level1");
+
+        if (restart) {
+            this.registry.set('playerScore', 0);
+            this.scene.stop("level1");
+            this.scene.start("level1");
+        } else {
+            this.inputLocked = false;
+            this.time.delayedCall(5000, () => { // wait 5 seconds before resetting so player leaves flag
+                this.isGameOver = false; // Reset game over state
+            });
+
+        }
     }
 
     /************************************************************************************************************* 
@@ -662,10 +722,15 @@ class Platformer extends Phaser.Scene {
     -------------------------------------------------- OFF MAP + SPAWNING -------------------------------------------------- 
     ***********************************************************************************************************************/
 
-    handleOffMap() {
+    handleRespawn(dead=false) {
         // If below world
         if(my.sprite.player.y > this.scale.height) {
-            my.sprite.player.setPosition(this.lastSafePosition[0], this.lastSafePosition[1]); // respawn at spawn point
+            dead = true; // set dead to true
+        }
+
+        if (dead) {
+            // If dead, respawn at last safe position
+            my.sprite.player.setPosition(this.spawnPoint[0], this.spawnPoint[1]); // respawn at last safe position
             my.sprite.player.setVelocity(0, 0); // reset velocity
             my.sprite.player.setAcceleration(0, 0); // reset acceleration
             my.sprite.player.setDrag(0, 0); // reset drag
@@ -673,17 +738,6 @@ class Platformer extends Phaser.Scene {
             this.time.delayedCall(200, () => {
                 this.inputLocked = false;
             });
-        }
-    }
-
-    updateSpawn(groundedNow) {
-        if (groundedNow) {
-            const tile = this.groundLayer.getTileAtWorldXY(my.sprite.player.x, my.sprite.player.y + my.sprite.player.height / 2);
-            //console.log(tile.properties);
-            if (tile && tile.properties.safeGround) {
-                this.lastSafePosition = [my.sprite.player.x, my.sprite.player.y];
-                //console.log("Safe spawn point updated to: ", this.lastSafePosition);
-            }
         }
     }
 }
