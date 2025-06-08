@@ -114,7 +114,8 @@ class Platformer extends Phaser.Scene {
             const checkpoint = JSON.parse(saved);
             
             if (checkpoint.scene === this.scene.key) {
-                this.spawnPoint = [checkpoint.spawnX, checkpoint.spawnY];
+                my.sprite.player.x = checkpoint.spawnX;
+                my.sprite.player.y = checkpoint.spawnY;
                 this.registry.set('playerScore', checkpoint.score);
                 my.sprite.player.setPosition(checkpoint.spawnX, checkpoint.spawnY);
             }
@@ -397,8 +398,7 @@ class Platformer extends Phaser.Scene {
         if (checkpointX && checkpointY) {
             this.checkpoints.getChildren().forEach(flag => {
                 if (flag.x == checkpointX && flag.y == checkpointY) {
-                    console.log(flag);
-                    this.spawnPoint = [flag.x, flag.y]; // Update spawn point to this flag
+                    this.spawnPoint = [flag.x, flag.y]; // Update spawn point to this flag 
                     this.tweens.add({
                         targets: flag,
                         y: flag.y - 8,
