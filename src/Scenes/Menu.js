@@ -44,7 +44,12 @@ class Menu extends Phaser.Scene {
 
         // Start Button
         makeButton('[ New Game ]', centerY + offsetY, () => {
-            localStorage.removeItem('savedCheckpoint'); // Clear any saved checkpoint
+            localStorage.removeItem('savedCheckpoint'); // Clear checkpoint
+            localStorage.removeItem('checkpointX'); // Clear any saved checkpoint
+            localStorage.removeItem('checkpointY'); // Clear any saved checkpoint
+            localStorage.removeItem('defeatedEnemies'); // Clear defeated enemies
+            localStorage.removeItem('collectedItems'); // Clear collected items 
+            this.scene.stop('level1');
             this.scene.start('level1');
         });
 

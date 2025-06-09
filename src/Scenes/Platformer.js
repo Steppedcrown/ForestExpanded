@@ -21,6 +21,8 @@ class Platformer extends Phaser.Scene {
         this.isGameOver = false;
         this.wasGrounded = false;
         this.inputLocked = false;
+        this.playerDead = false; // flag to check if the player is dead
+        this.respawning = false; // flag to check if the player is respawning
 
         // Coyote time
         this.coyoteTime = 0;
@@ -99,14 +101,25 @@ class Platformer extends Phaser.Scene {
         const bgColor = this.cache.tilemap.get("platformer-level-1").data.backgroundcolor;
         if (bgColor) this.cameras.main.setBackgroundColor(bgColor);
 
-        // Set up game
+        // Set up UI
         this.addButtons();
         this.setupScore();
-        this.addObjects();
-        this.addMovingPlatforms();
+
+        // Juice
         this.setupInput();
         this.setupAudio();
         this.setupVFX();
+
+        // Game objects
+        this.addObjects();
+        this.addMovingPlatforms();
+        this.setupEnemies();
+
+        // Enable pathfinding
+        this.initEasyStar();
+        this.flyingEnemyGroup.getChildren().forEach(enemy => {
+            this.findPath(enemy);
+        });
 
         // Load saved game
         const saved = localStorage.getItem('savedCheckpoint');
@@ -138,21 +151,189 @@ class Platformer extends Phaser.Scene {
         // Handle landing VFX
         this.landingVFX(groundedNow);
 
-        // Check for off-map
-        this.handleRespawn();
+        // If below world
+        if(my.sprite.player.y > this.scale.height) this.playerDead = true;
 
-        // Update if player is on safe ground and save
+        // Update if player is on safe ground
         this.updateSafeGround(groundedNow);
+
+        // Handle enemy movement
+        this.flyingEnemyGroup.getChildren().forEach(enemy => {
+            this.moveFlyingEnemy(enemy);
+        });
+
+        // Respawn if player is dead
+        if (this.playerDead && !this.respawning) this.handleRespawn();
+
+        // Save game state
+        this.saveGame();
 
         // Update for next frame
         this.wasGrounded = groundedNow;
-
-        this.saveGame();
     }
+
+    /*************************************************************************************************************** 
+    -------------------------------------------------- Pathfinding -------------------------------------------------
+    ***************************************************************************************************************/
+
+    initEasyStar() {
+        this.easystar = new EasyStar.js();
+
+        // Create a grid where 0 = empty, 1 = blocked
+        const grid = [];
+        for (let y = 0; y < this.map.height; y++) {
+            const row = [];
+            for (let x = 0; x < this.map.width; x++) {
+                const tile = this.groundLayer.getTileAt(x, y);
+                row.push(tile ? 1 : 0); // 1 = wall, 0 = empty space
+            }
+            grid.push(row);
+        }
+
+        this.easystar.setGrid(grid);
+        this.easystar.setAcceptableTiles([0]); // Only allow movement through empty space
+        this.easystar.enableDiagonals(); // Diagonal movement
+    }
+
+    worldToTile = (x, y) => ({
+        x: Math.floor(x / this.map.tileWidth),
+        y: Math.floor(y / this.map.tileHeight)
+    });
+
+    tileToWorld = (tx, ty) => ({
+        x: tx * this.map.tileWidth + this.map.tileWidth / 2,
+        y: ty * this.map.tileHeight + this.map.tileHeight / 2
+    });
+
+    findPath(enemy) {
+        let lastPlayerTile = null;
+
+        this.time.addEvent({
+            delay: 200, // Reduce delay for more responsiveness
+            loop: true,
+            callback: () => {
+                const start = this.worldToTile(enemy.x, enemy.y);
+                const end = this.worldToTile(my.sprite.player.x, my.sprite.player.y);
+
+                // Bounds check
+                if (
+                    start.x < 0 || start.y < 0 || end.x < 0 || end.y < 0 ||
+                    start.x >= this.map.width || start.y >= this.map.height ||
+                    end.x >= this.map.width || end.y >= this.map.height
+                ) return;
+
+                // Only update path if player moved to a new tile
+                if (!lastPlayerTile || end.x !== lastPlayerTile.x || end.y !== lastPlayerTile.y) {
+                    lastPlayerTile = end;
+
+                    this.easystar.findPath(start.x, start.y, end.x, end.y, path => {
+                        if (path && path.length > 1) {
+                            enemy.path = path;
+                            enemy.pathIndex = 1;
+                        }
+                    });
+
+                    this.easystar.calculate();
+                }
+            }
+        });
+    }
+
+    moveFlyingEnemy(enemy, speed = 80) {
+        if (!enemy.path || enemy.pathIndex >= enemy.path.length) {
+            // Move directly toward the player instead
+            const dx = my.sprite.player.x - enemy.x;
+            const dy = my.sprite.player.y - enemy.y;
+            const dist = Math.hypot(dx, dy);
+
+            if (dist > 2) {
+                const angle = Math.atan2(dy, dx);
+                enemy.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+            } else {
+                enemy.setVelocity(0);
+            }
+
+            return;
+        }
+
+        const targetTile = enemy.path[enemy.pathIndex];
+        const { x: worldX, y: worldY } = this.tileToWorld(targetTile.x, targetTile.y);
+
+        const dx = worldX - enemy.x;
+        const dy = worldY - enemy.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist < 4) {
+            enemy.setVelocity(0);
+            enemy.pathIndex++;
+        } else {
+            const angle = Math.atan2(dy, dx);
+            enemy.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+        }
+    }
+
 
     /*************************************************************************************************************** 
     -------------------------------------------------- GAME SETUP --------------------------------------------------
     ***************************************************************************************************************/
+    setupEnemies() {
+        // Load defeated enemies from localStorage (at the top)
+        const defeated = new Set(JSON.parse(localStorage.getItem('defeatedEnemies') || '[]'));
+
+        // Create enemy group
+        this.enemyGroup = this.physics.add.group({
+            immovable: true,
+            allowGravity: false
+        });
+        this.flyingEnemyGroup = this.physics.add.group({
+            immovable: true,
+            allowGravity: false
+        });
+
+        // Add enemies
+        const basicEnemy = this.enemyGroup.create(200, 200, 'platformer_characters', 'tile_0022.png');
+        basicEnemy.setOrigin(0.5, 1); // Set origin to center bottom
+        basicEnemy.body.setSize(basicEnemy.width, basicEnemy.height); // Modify size to fit sprite
+        basicEnemy._id = "enemy_00"; // Assign ID
+
+        const flyingEnemy = this.flyingEnemyGroup.create(100, 100, 'platformer_characters', 'tile_0025.png');
+        flyingEnemy.path = null;
+        flyingEnemy.pathIndex = 0;
+        flyingEnemy.setOrigin(0.5);
+        flyingEnemy.setCollideWorldBounds(true);
+        flyingEnemy._id = "enemy_01"; // Assign ID
+
+        // Remove defeated enemies
+        [basicEnemy, flyingEnemy].forEach(enemy => {
+            if (defeated.has(enemy._id)) {
+                enemy.destroy(); // Remove defeated enemy
+            }
+        });
+
+        // Add enemy collision logic
+        [this.enemyGroup, this.flyingEnemyGroup].forEach(group => {
+            this.physics.add.collider(my.sprite.player, group, (player, enemy) => {
+                const enemyId = enemy._id;
+
+                if (player.body.velocity.y >= 0 && enemy.body.touching.up && player.body.touching.down) {
+                    // Save defeat to localStorage
+                    const current = new Set(JSON.parse(localStorage.getItem('defeatedEnemies') || '[]'));
+                    current.add(enemyId);
+                    localStorage.setItem('defeatedEnemies', JSON.stringify([...current]));
+
+                    // Enemy defeated
+                    enemy.destroy();
+                    player.setVelocityY(-200);
+                    this.jumpSound.play();
+                } else {
+                    // Player hit side or bottom = death
+                    this.playerDead = true;
+                }
+            });
+        });
+    }
+
+
     setupInput() {
         // Input handling
         cursors = this.input.keyboard.createCursorKeys();
@@ -392,16 +573,10 @@ class Platformer extends Phaser.Scene {
         });
 
         const collected = new Set(JSON.parse(localStorage.getItem('collectedItems')));
-        console.log("Collected items from localStorage: ", collected);
         if (collected && collected.size > 0) {
             [this.coins, this.diamonds].forEach(group => {
                 group.forEach(obj => {
-                    //const id = `${obj.name}_${Math.round(obj.x)}_${Math.round(obj.y)}`;
-                    console.log("Checking collected item: " + obj.id);
                     if (collected.has(obj.id)) {
-                        console.log("Removing collected item: " + obj.id);
-                        //obj.setActive(false, false); // Deactivate the object
-                        //obj.setVisible(false); // Hide the object
                         obj.destroy(); // Destroy the object
                     }
                 });
@@ -448,7 +623,6 @@ class Platformer extends Phaser.Scene {
             this.updateScore(1); // increment score
 
             const coinId = `coin_${Math.round(coin.x)}_${Math.round(coin.y)}`;
-            console.log("Collected coin: " + coinId);
             this.collectedItems = JSON.parse(localStorage.getItem('collectedItems'));
             this.collectedItems = new Set(this.collectedItems || []); // Initialize if null
 
@@ -479,7 +653,6 @@ class Platformer extends Phaser.Scene {
             this.updateScore(5); // increment score
 
             const diamondId = `diamond_${Math.round(diamond.x)}_${Math.round(diamond.defaultY)}`; // Use defaultY for bobbing
-            console.log("Collected diamond: " + diamondId);
             this.collectedItems = JSON.parse(localStorage.getItem('collectedItems'));
             this.collectedItems = new Set(this.collectedItems || []); // Initialize if null
 
@@ -884,31 +1057,50 @@ class Platformer extends Phaser.Scene {
     -------------------------------------------------- OFF MAP + SPAWNING -------------------------------------------------- 
     ***********************************************************************************************************************/
 
-    handleRespawn(dead=false) {
-        // If below world
-        if(my.sprite.player.y > this.scale.height) dead = true;
+    handleRespawn() {
+        this.respawning = true; // Set respawning flag
+        // If dead, respawn at last check point
+        my.sprite.player.setVelocity(0, 0); // reset velocity
+        my.sprite.player.setAcceleration(0, 0); // reset acceleration
+        my.sprite.player.setDrag(0, 0); // reset drag
+        this.tweens.add({
+            targets: my.sprite.player,
+            alpha: 0,
+            scale: 0.1,
+            duration: 500,
+            repeat: 0,
+            onComplete: () => {
+                my.sprite.player.alpha = 1; // reset alpha
+                my.sprite.player.setScale(1); // reset scale
+                this.playerDead = false; // reset dead state
 
-        if (dead) {
-            // If dead, respawn at last safe position
-            my.sprite.player.setPosition(this.spawnPoint[0], this.spawnPoint[1]); // respawn at last safe position
-            my.sprite.player.setVelocity(0, 0); // reset velocity
-            my.sprite.player.setAcceleration(0, 0); // reset acceleration
-            my.sprite.player.setDrag(0, 0); // reset drag
-            this.inputLocked = true;
-            this.time.delayedCall(200, () => {
-                this.inputLocked = false;
+                // Disable collision right after respawn
+                [this.enemyGroup, this.flyingEnemyGroup].forEach(group => {
+                    group.getChildren().forEach(enemy => enemy.body.checkCollision.none = true);
+                });
+
+                my.sprite.player.setPosition(this.spawnPoint[0], this.spawnPoint[1]); // respawn at last checkpoint
+            }
+        });
+
+        this.inputLocked = true;
+        this.time.delayedCall(750, () => {
+            this.inputLocked = false;
+            this.respawning = false; // Reset respawning flag
+        });
+        this.time.delayedCall(3000, () => { // Reenable collision after respawn
+            [this.enemyGroup, this.flyingEnemyGroup].forEach(group => {
+                    group.getChildren().forEach(enemy => enemy.body.checkCollision.none = false);
             });
-        }
+        });
     }
 
     updateSafeGround(groundedNow) {
         // If player is grounded and on safe ground, update last safe position
         if (groundedNow) {
             const tile = this.groundLayer.getTileAtWorldXY(my.sprite.player.x, my.sprite.player.y + my.sprite.player.height / 2);
-            //console.log(tile.properties);
             if (tile && tile.properties.safeGround) {
                 this.lastSafePosition = [my.sprite.player.x, my.sprite.player.y];
-                //console.log("Safe spawn point updated to: ", this.lastSafePosition);
             }
         }
     }
