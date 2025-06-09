@@ -367,6 +367,14 @@ class Platformer extends Phaser.Scene {
         this.click = this.sound.add('uiClick', {
             volume: 0.2
         });
+        this.deadSound = this.sound.add('deathSound', {
+            volume: 0.3,
+            loop: false
+        });
+        this.checkpointSound = this.sound.add('checkpointSound', {
+            volume: 0.3,
+            loop: false
+        });
     }
 
     setupVFX() {
@@ -674,6 +682,7 @@ class Platformer extends Phaser.Scene {
                     ease: 'Linear'
                 });
                 flag.raised = true; // Mark this flag as raised
+                this.checkpointSound.play(); // Play checkpoint sound
                 this.checkpoints.getChildren().forEach(f => {
                     if (f !== flag && f.raised) {
                         // Lower all other flags
@@ -1063,6 +1072,7 @@ class Platformer extends Phaser.Scene {
         my.sprite.player.setVelocity(0, 0); // reset velocity
         my.sprite.player.setAcceleration(0, 0); // reset acceleration
         my.sprite.player.setDrag(0, 0); // reset drag
+        this.deadSound.play(); // Play death sound
         this.tweens.add({
             targets: my.sprite.player,
             alpha: 0,
