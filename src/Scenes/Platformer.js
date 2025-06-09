@@ -15,7 +15,8 @@ class Platformer extends Phaser.Scene {
         this.MAX_FALL_VELOCITY = 750; // max fall speed
 
         // Spawn points
-        this.spawnPoint = [430, 400]; // beginning spawn point
+        this.DEFAULT_SPAWN_POINT = [430, 400]; // default spawn point
+        this.spawnPoint = this.DEFAULT_SPAWN_POINT; // spawn point
         this.endPoint = [250, 500]; // end spawn point
         //this.spawnPoint = [2005, 100]; // Inside mountain spawn point
 
@@ -141,11 +142,15 @@ class Platformer extends Phaser.Scene {
             }
         }
 
-        // Overlay Title screen
-        if (!this.scene.isActive('menu')) {
-            this.inputLocked = true; // Lock input initially
-            this.scene.launch('menu'); // Launch title over this scene
+        if (this.inputLocked === undefined) { // initialize inputLocked if not already set
+            this.inputLocked = true;
         }
+
+        if (this.inputLocked) { // if input is locked, show the menu
+            this.scene.launch('menu');
+        }
+
+        console.log(this.spawnPoint);
     }
 
     update(time, delta) {
@@ -419,7 +424,7 @@ class Platformer extends Phaser.Scene {
         this.spaceKey = this.input.keyboard.addKey('SPACE');
 
         this.input.keyboard.on('keydown-ESC', () => {
-            if (!this.scene.isActive('PauseOverlay')) {
+            if (!this.scene.isActive('PauseOverlay') && !this.scene.isActive('menu')) {
                 this.click.play(); // Play button click sound
                 this.scene.launch('PauseOverlay', { gameSceneKey: this.scene.key });
                 this.inputLocked = true; // Lock input while paused

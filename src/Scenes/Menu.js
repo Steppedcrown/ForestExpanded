@@ -70,6 +70,24 @@ class Menu extends Phaser.Scene {
             this.offsetY += this.incrementY; // Increment offset for next button  
         };
 
+        // Resume with esc key
+        this.input.keyboard.on('keydown-ESC', () => {
+            this.input.enabled = false;
+            this.click.play();
+
+            this.tweens.add({
+                targets: this.cameras.main,
+                alpha: 0,
+                duration: 800,
+                ease: 'Linear',
+                onComplete: () => {
+                    this.scene.stop();                 // Stop pause overlay
+                    this.scene.resume('level1'); // Resume the paused game scene
+                    this.scene.get('level1').inputLocked = false;   // Unlock input
+                }
+            });
+        });
+
         if (localStorage.getItem('savedCheckpoint')) {
             makeButton('[ Continue ]', centerY, () => {
                 this.input.enabled = false; // Prevent double clicking
@@ -90,6 +108,12 @@ class Menu extends Phaser.Scene {
         // New game Button
         makeButton('[ New Game ]', centerY + this.offsetY, () => {
             this.input.enabled = false;
+            // Reset and restart level
+            this.registry.set('playerScore', 0);
+            let highScore = parseInt(localStorage.getItem('highScore')) || 0;
+            localStorage.clear();
+            localStorage.setItem('highScore', highScore); // Reset high score
+            this.scene.start('level1');
 
             this.tweens.add({
                 targets: this.cameras.main,
@@ -97,12 +121,6 @@ class Menu extends Phaser.Scene {
                 duration: 800,
                 ease: 'Linear',
                 onComplete: () => {
-                    // Reset and restart level
-                    this.registry.set('playerScore', 0);
-                    let highScore = parseInt(localStorage.getItem('highScore')) || 0;
-                    localStorage.clear();
-                    localStorage.setItem('highScore', highScore); // Reset high score
-                    this.scene.start('level1');
                     this.scene.get('level1').inputLocked = false;
                     this.scene.stop(); // stop menu
                 }
