@@ -416,7 +416,7 @@ class Platformer extends Phaser.Scene {
             loop: false
         });
         this.checkpointSound = this.sound.add('checkpointSound', {
-            volume: 0.1,
+            volume: 0.2,
             loop: false
         });
     }
