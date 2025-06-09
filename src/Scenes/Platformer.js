@@ -299,6 +299,7 @@ class Platformer extends Phaser.Scene {
         const flyingEnemy = this.flyingEnemyGroup.create(100, 100, 'platformer_characters', 'tile_0025.png');
         flyingEnemy.path = null;
         flyingEnemy.pathIndex = 0;
+        flyingEnemy.body.setSize(flyingEnemy.width, flyingEnemy.height / 4); // Modify size to fit sprite
         flyingEnemy.setOrigin(0.5);
         flyingEnemy.setCollideWorldBounds(true);
         flyingEnemy._id = "enemy_01"; // Assign ID
