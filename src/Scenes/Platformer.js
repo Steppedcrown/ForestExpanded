@@ -327,24 +327,23 @@ class Platformer extends Phaser.Scene {
             this.physics.add.collider(my.sprite.player, group, (player, enemy) => {
                 const enemyId = enemy._id;
 
-                if (player.body.velocity.y >= 0 && enemy.body.touching.up && player.body.touching.down) {
-                    // Save defeat to localStorage
+                const verticalVelocity = player.body.velocity.y;
+                const isAbove = verticalVelocity <= 0 && player.body.bottom <= enemy.body.top + 5;
+
+                if (isAbove) {
                     const current = new Set(JSON.parse(localStorage.getItem('defeatedEnemies') || '[]'));
                     current.add(enemyId);
                     localStorage.setItem('defeatedEnemies', JSON.stringify([...current]));
 
-                    // Enemy defeated
                     enemy.destroy();
                     player.setVelocityY(-200);
                     this.jumpSound.play();
                 } else {
-                    // Player hit side or bottom = death
                     this.playerDead = true;
                 }
             });
         });
     }
-
 
     setupInput() {
         // Input handling
