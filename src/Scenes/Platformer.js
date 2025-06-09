@@ -121,7 +121,6 @@ class Platformer extends Phaser.Scene {
             this.findPath(enemy);
         });
 
-
         // Load saved game
         const saved = localStorage.getItem('savedCheckpoint');
         if (saved) {
@@ -207,28 +206,53 @@ class Platformer extends Phaser.Scene {
     });
 
     findPath(enemy) {
+        let lastPlayerTile = null;
+
         this.time.addEvent({
-            delay: 1000, // every 1 second
+            delay: 200, // Reduce delay for more responsiveness
             loop: true,
             callback: () => {
                 const start = this.worldToTile(enemy.x, enemy.y);
                 const end = this.worldToTile(my.sprite.player.x, my.sprite.player.y);
 
-                this.easystar.findPath(start.x, start.y, end.x, end.y, path => {
-                    if (path && path.length > 1) {
-                        enemy.path = path;
-                        enemy.pathIndex = 1;
-                    }
-                });
+                // Bounds check
+                if (
+                    start.x < 0 || start.y < 0 || end.x < 0 || end.y < 0 ||
+                    start.x >= this.map.width || start.y >= this.map.height ||
+                    end.x >= this.map.width || end.y >= this.map.height
+                ) return;
 
-                this.easystar.calculate(); // triggers pathfinding
+                // Only update path if player moved to a new tile
+                if (!lastPlayerTile || end.x !== lastPlayerTile.x || end.y !== lastPlayerTile.y) {
+                    lastPlayerTile = end;
+
+                    this.easystar.findPath(start.x, start.y, end.x, end.y, path => {
+                        if (path && path.length > 1) {
+                            enemy.path = path;
+                            enemy.pathIndex = 1;
+                        }
+                    });
+
+                    this.easystar.calculate();
+                }
             }
         });
     }
 
     moveFlyingEnemy(enemy, speed = 80) {
         if (!enemy.path || enemy.pathIndex >= enemy.path.length) {
-            enemy.setVelocity(0);
+            // Move directly toward the player instead
+            const dx = my.sprite.player.x - enemy.x;
+            const dy = my.sprite.player.y - enemy.y;
+            const dist = Math.hypot(dx, dy);
+
+            if (dist > 2) {
+                const angle = Math.atan2(dy, dx);
+                enemy.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+            } else {
+                enemy.setVelocity(0);
+            }
+
             return;
         }
 
@@ -247,6 +271,7 @@ class Platformer extends Phaser.Scene {
             enemy.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
         }
     }
+
 
     /*************************************************************************************************************** 
     -------------------------------------------------- GAME SETUP --------------------------------------------------
