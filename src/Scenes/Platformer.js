@@ -12,10 +12,11 @@ class Platformer extends Phaser.Scene {
         this.PARTICLE_VELOCITY = 50; // velocity of the particles
         this.SCALE = 2.0; // scale of the game
         this.MAX_VELOCITY = 300; // max speed
+        this.MAX_FALL_VELOCITY = 750; // max fall speed
 
         // Spawn points
         this.spawnPoint = [430, 400]; // beginning spawn point
-        //this.spawnPoint = [1200, 0]; // end spawn point
+        //this.spawnPoint = [2005, 100]; // end spawn point
 
         // Game states
         this.isGameOver = false;
@@ -152,6 +153,7 @@ class Platformer extends Phaser.Scene {
 
         // Handle jumping
         this.handleJump(groundedNow, delta);
+        if (my.sprite.player.body.velocity.y > this.MAX_FALL_VELOCITY) my.sprite.player.body.setVelocityY(this.MAX_FALL_VELOCITY);
 
         // Handle landing VFX
         this.landingVFX(groundedNow);
@@ -538,6 +540,7 @@ class Platformer extends Phaser.Scene {
             strokeThickness: 5
         }).setOrigin(0.5)
         .setVisible(false) // Hide the text initially
+        .setDepth(this.UI_DEPTH) // Ensure it appears above other elements
         .setScrollFactor(0); // Make it not scroll with the camera
 
         // Restart button
