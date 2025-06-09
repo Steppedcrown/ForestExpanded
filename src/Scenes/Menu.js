@@ -46,6 +46,8 @@ class Menu extends Phaser.Scene {
             volume: 0.2
         });
 
+        this.offsetY = 0; // Offset for button positioning
+        this.incrementY = 40; // Increment for button spacing
         // Helper function to create buttons with highlight background
         const makeButton = (text, y, callback) => {
             const label = this.add.bitmapText(centerX, y, 'myFont', text, 16).setOrigin(0.5);
@@ -62,16 +64,15 @@ class Menu extends Phaser.Scene {
                 .on('pointerdown', callback)
                 .on('pointerover', () => bg.setVisible(true))
                 .on('pointerout', () => bg.setVisible(false));
+            this.offsetY += this.incrementY; // Increment offset for next button  
         };
 
-        let offsetY = 0;
         if (localStorage.getItem('savedCheckpoint')) {
             makeButton('[ Continue ]', centerY, () => this.scene.start('level1'));
-            offsetY += 30; // Adjust offset
         }
 
-        // Start Button
-        makeButton('[ New Game ]', centerY + offsetY, () => {
+        // New game Button
+        makeButton('[ New Game ]', centerY + this.offsetY, () => {
             this.registry.set('playerScore', 0); // Reset score
             localStorage.removeItem('savedCheckpoint'); // Clear checkpoint
             localStorage.removeItem('checkpointX'); // Clear any saved checkpoint
@@ -83,27 +84,27 @@ class Menu extends Phaser.Scene {
         });
 
         // Controls
-        makeButton('[ Controls ]', centerY + offsetY + 30, () => {
+        makeButton('[ Controls ]', centerY + this.offsetY, () => {
             this.controls.setVisible(!this.controls.visible);
         });
 
         // Credits
-        makeButton('[  Credits  ]', centerY + offsetY + 60, () => {
+        makeButton('[  Credits  ]', centerY + this.offsetY, () => {
             this.credits.setVisible(!this.credits.visible);
         });
 
         // Quit Button
-        makeButton('[ Quit Game ]', centerY + offsetY + 90, () => {
+        makeButton('[ Quit Game ]', centerY + this.offsetY, () => {
             window.close();
             window.open('', '_self')?.close();
         });
 
-        makeButton('[ Reset High Score ]', centerY + offsetY + 150, () => {
+        makeButton('[ Reset High Score ]', centerY + this.offsetY + this.incrementY, () => {
             localStorage.setItem('highScore', 0);
             this.displayHighScore.setText('High Score: 0');
         });
 
-        makeButton('[ Reset Browser Cache ]', centerY + offsetY + 180, () => {
+        makeButton('[ Reset Browser Cache ]', centerY + this.offsetY + this.incrementY, () => {
             localStorage.clear();
             this.displayHighScore.setText('High Score: 0');
         });
