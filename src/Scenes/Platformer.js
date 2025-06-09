@@ -387,6 +387,7 @@ class Platformer extends Phaser.Scene {
         });
         this.diamonds.forEach(obj => {
             obj.id = `diamond_${Math.round(obj.x)}_${Math.round(obj.y)}`; // e.g., 'diamond_32_240'
+            obj.defaultY = obj.y; // Store default Y position for bobbing
             this.diamondGroup.add(obj); // Add to diamond group
         });
 
@@ -399,7 +400,9 @@ class Platformer extends Phaser.Scene {
                     console.log("Checking collected item: " + obj.id);
                     if (collected.has(obj.id)) {
                         console.log("Removing collected item: " + obj.id);
-                        obj.destroy(); // Remove collected items
+                        //obj.setActive(false, false); // Deactivate the object
+                        //obj.setVisible(false); // Hide the object
+                        obj.destroy(); // Destroy the object
                     }
                 });
             });
@@ -446,9 +449,8 @@ class Platformer extends Phaser.Scene {
 
             const coinId = `coin_${Math.round(coin.x)}_${Math.round(coin.y)}`;
             console.log("Collected coin: " + coinId);
-            if (!this.collectedItems) {
-                this.collectedItems = new Set();
-            }
+            this.collectedItems = JSON.parse(localStorage.getItem('collectedItems'));
+            this.collectedItems = new Set(this.collectedItems || []); // Initialize if null
 
             this.collectedItems.add(coinId); // e.g., 'coin_32_240'
 
@@ -476,11 +478,10 @@ class Platformer extends Phaser.Scene {
             });
             this.updateScore(5); // increment score
 
-            const diamondId = `diamond_${Math.round(diamond.x)}_${Math.round(diamond.y)}`;
+            const diamondId = `diamond_${Math.round(diamond.x)}_${Math.round(diamond.defaultY)}`; // Use defaultY for bobbing
             console.log("Collected diamond: " + diamondId);
-            if (!this.collectedItems) {
-                this.collectedItems = new Set();
-            }
+            this.collectedItems = JSON.parse(localStorage.getItem('collectedItems'));
+            this.collectedItems = new Set(this.collectedItems || []); // Initialize if null
 
             this.collectedItems.add(diamondId); // e.g., 'coin_32_240'
 
