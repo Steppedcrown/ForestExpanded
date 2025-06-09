@@ -158,9 +158,8 @@ class Platformer extends Phaser.Scene {
         this.updateSafeGround(groundedNow);
 
         // Handle enemy movement
-        this.flyingEnemyGroup.getChildren().forEach(enemy => {
-            this.moveFlyingEnemy(enemy);
-        });
+        this.enemyGroup.getChildren().forEach(enemy => {this.moveGroundEnemy(enemy);});
+        this.flyingEnemyGroup.getChildren().forEach(enemy => {this.moveFlyingEnemy(enemy);});
 
         // Respawn if player is dead
         if (this.playerDead && !this.respawning) this.handleRespawn();
@@ -239,7 +238,7 @@ class Platformer extends Phaser.Scene {
         });
     }
 
-    moveFlyingEnemy(enemy, speed = 80) {
+    moveFlyingEnemy(enemy) {
         if (!enemy.path || enemy.pathIndex >= enemy.path.length) {
             // Move directly toward the player instead
             const dx = my.sprite.player.x - enemy.x;
@@ -248,7 +247,7 @@ class Platformer extends Phaser.Scene {
 
             if (dist > 2) {
                 const angle = Math.atan2(dy, dx);
-                enemy.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+                enemy.setVelocity(Math.cos(angle) * enemy.speed, Math.sin(angle) * enemy.speed);
             } else {
                 enemy.setVelocity(0);
             }
@@ -268,20 +267,47 @@ class Platformer extends Phaser.Scene {
             enemy.pathIndex++;
         } else {
             const angle = Math.atan2(dy, dx);
-            enemy.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+            enemy.setVelocity(Math.cos(angle) * enemy.speed, Math.sin(angle) * enemy.speed);
         }
     }
 
+    moveGroundEnemy(enemy) {
+        const body = enemy.body;
+        let turned = false;
+
+        // Flip sprite based on direction
+        enemy.setFlipX(enemy.direction > 0);
+
+        // Check for wall collision
+        if ((body.blocked.left && enemy.direction < 0) || (body.blocked.right && enemy.direction > 0)) {
+            enemy.direction *= -1;
+            enemy.setVelocityX(enemy.speed * enemy.direction);
+            turned = true;
+        }
+
+        // Check tile ahead to avoid falling off a ledge
+        if (!turned) {
+            const aheadX = enemy.x + enemy.direction * (enemy.width / 2 + 4);
+            const aheadY = enemy.y + 2; // Just below the enemy's feet
+            const tile = this.groundLayer.getTileAtWorldXY(aheadX, aheadY);
+
+            if (!tile) {
+                enemy.direction *= -1;
+                enemy.setVelocityX(enemy.speed * enemy.direction);
+            }
+        }
+    }
 
     /*************************************************************************************************************** 
     -------------------------------------------------- GAME SETUP --------------------------------------------------
     ***************************************************************************************************************/
 
-    createEnemy(x, y, frame, group, flying, id) {
+    createEnemy(x, y, frame, group, flying, id, speed) {
         const enemy = group.create(x, y, 'platformer_characters', frame);
         enemy.setOrigin(0.5, 1); // Set origin to center bottom
         enemy.body.setSize(enemy.width, enemy.height); // Modify size to fit sprite
         enemy.setCollideWorldBounds(true); // Ensure it doesn't go out of bounds
+        enemy.speed = speed || 50; // Default speed for enemies
 
         this.enemyCount = (this.enemyCount || 0) + 1; // Increment enemy count
         enemy._id = id; // Assign ID based on count
@@ -290,6 +316,10 @@ class Platformer extends Phaser.Scene {
             enemy.path = null; // Initialize path for flying enemies
             enemy.pathIndex = 0; // Initialize path index
             enemy.body.setSize(enemy.width, enemy.height / 4); // Modify size to fit sprite
+        } else {
+            enemy.direction = 1; // Default direction for ground enemies
+            enemy.setVelocityX(enemy.speed * enemy.direction); // Set initial velocity
+            //enemy.allowGravity = true; // Allow gravity for ground enemies
         }
 
         return enemy;
@@ -302,7 +332,7 @@ class Platformer extends Phaser.Scene {
         // Create enemy group
         this.enemyGroup = this.physics.add.group({
             immovable: true,
-            allowGravity: false
+            allowGravity: true
         });
         this.flyingEnemyGroup = this.physics.add.group({
             immovable: true,
@@ -310,8 +340,8 @@ class Platformer extends Phaser.Scene {
         });
 
         // Add enemies
-        const basicEnemy1 = this.createEnemy(200, 200, 'tile_0022.png', this.enemyGroup, false, "enemy_1");
-        const flyingEnemy1 = this.createEnemy(300, 100, 'tile_0025.png', this.flyingEnemyGroup, true, "flying_enemy_1");
+        const basicEnemy1 = this.createEnemy(600, 0, 'tile_0022.png', this.enemyGroup, false, "enemy_1", 50);
+        const flyingEnemy1 = this.createEnemy(300, 100, 'tile_0025.png', this.flyingEnemyGroup, true, "flying_enemy_1", 75);
 
         // Remove defeated enemies
         [this.enemyGroup, this.flyingEnemyGroup].forEach(group => {
@@ -321,6 +351,9 @@ class Platformer extends Phaser.Scene {
                 }
             });
         });
+
+        // Ground collision logic for ground enemies
+        this.physics.add.collider(this.enemyGroup, this.groundLayer);
 
         // Add enemy collision logic
         [this.enemyGroup, this.flyingEnemyGroup].forEach(group => {
@@ -383,7 +416,7 @@ class Platformer extends Phaser.Scene {
             loop: false
         });
         this.checkpointSound = this.sound.add('checkpointSound', {
-            volume: 0.3,
+            volume: 0.1,
             loop: false
         });
     }
@@ -1096,7 +1129,7 @@ class Platformer extends Phaser.Scene {
                 this.playerDead = false; // reset dead state
 
                 // Disable collision right after respawn
-                [this.enemyGroup, this.flyingEnemyGroup].forEach(group => {
+                [this.flyingEnemyGroup].forEach(group => {
                     group.getChildren().forEach(enemy => enemy.body.checkCollision.none = true);
                 });
 
@@ -1110,7 +1143,7 @@ class Platformer extends Phaser.Scene {
             this.respawning = false; // Reset respawning flag
         });
         this.time.delayedCall(3000, () => { // Reenable collision after respawn
-            [this.enemyGroup, this.flyingEnemyGroup].forEach(group => {
+            [this.flyingEnemyGroup].forEach(group => {
                     group.getChildren().forEach(enemy => enemy.body.checkCollision.none = false);
             });
         });
