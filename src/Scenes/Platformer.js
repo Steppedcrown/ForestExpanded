@@ -21,6 +21,8 @@ class Platformer extends Phaser.Scene {
         this.isGameOver = false;
         this.wasGrounded = false;
         this.inputLocked = false;
+        this.playerDead = false; // flag to check if the player is dead
+        this.respawning = false; // flag to check if the player is respawning
 
         // Coyote time
         this.coyoteTime = 0;
@@ -139,16 +141,20 @@ class Platformer extends Phaser.Scene {
         // Handle landing VFX
         this.landingVFX(groundedNow);
 
-        // Check for off-map
-        this.handleRespawn();
+        // If below world
+        if(my.sprite.player.y > this.scale.height) this.playerDead = true;
 
-        // Update if player is on safe ground and save
+        // Update if player is on safe ground
         this.updateSafeGround(groundedNow);
+
+        // Respawn if player is dead
+        if (this.playerDead && !this.respawning) this.handleRespawn();
+
+        // Save game state
+        this.saveGame();
 
         // Update for next frame
         this.wasGrounded = groundedNow;
-
-        this.saveGame();
     }
 
     /*************************************************************************************************************** 
@@ -164,6 +170,16 @@ class Platformer extends Phaser.Scene {
         // Add enemy collision handling
         this.physics.add.collider(my.sprite.player, this.enemyGroup, (player, enemy) => {
             if (player.body.velocity.y >= 0 && enemy.body.touching.up && player.body.touching.down) {
+                const enemyId = `enemy_${Math.round(enemy.x)}_${Math.round(enemy.y)}`;
+                this.defeatedEnemies = JSON.parse(localStorage.getItem('defeatedEnemies'));
+                this.defeatedEnemies = new Set(this.defeatedEnemies || []); // Initialize if null
+
+                this.defeatedEnemies.add(enemyId); // e.g., 'enemy_32_240'
+                console.log(enemyId);
+
+                // Save to localStorage
+                localStorage.setItem('defeatedEnemies', JSON.stringify([...this.defeatedEnemies]));
+
                 // Landed on top of enemy
                 enemy.destroy();
 
@@ -174,7 +190,7 @@ class Platformer extends Phaser.Scene {
                 this.jumpSound.play();
             } else {
                 // Hit from side or bottom = player death
-                this.handleRespawn(true); // true = dead on function call
+                this.playerDead = true;
             }
         });
 
@@ -182,6 +198,16 @@ class Platformer extends Phaser.Scene {
         const enemy = this.enemyGroup.create(200, 200, 'platformer_characters', 'tile_0022.png');
         enemy.setOrigin(0.5, 1); // Feet on ground
         enemy.body.setSize(enemy.width, enemy.height); // Adjust hitbox if needed
+
+        // Remove defeated enemies
+        const defeated = new Set(JSON.parse(localStorage.getItem('defeatedEnemies')));
+        if (defeated && defeated.size > 0) {
+            this.enemyGroup.getChildren().forEach(enemy => {
+                if (defeated.has(enemy.id)) {
+                    enemy.destroy(); // Destroy the object
+                }
+            });
+        }
     }
 
     setupInput() {
@@ -907,21 +933,30 @@ class Platformer extends Phaser.Scene {
     -------------------------------------------------- OFF MAP + SPAWNING -------------------------------------------------- 
     ***********************************************************************************************************************/
 
-    handleRespawn(dead=false) {
-        // If below world
-        if(my.sprite.player.y > this.scale.height) dead = true;
-
-        if (dead) {
-            // If dead, respawn at last safe position
-            my.sprite.player.setPosition(this.spawnPoint[0], this.spawnPoint[1]); // respawn at last safe position
-            my.sprite.player.setVelocity(0, 0); // reset velocity
-            my.sprite.player.setAcceleration(0, 0); // reset acceleration
-            my.sprite.player.setDrag(0, 0); // reset drag
-            this.inputLocked = true;
-            this.time.delayedCall(200, () => {
-                this.inputLocked = false;
-            });
-        }
+    handleRespawn() {
+        this.respawning = true; // Set respawning flag
+        // If dead, respawn at last check point
+        my.sprite.player.setVelocity(0, 0); // reset velocity
+        my.sprite.player.setAcceleration(0, 0); // reset acceleration
+        my.sprite.player.setDrag(0, 0); // reset drag
+        this.tweens.add({
+            targets: my.sprite.player,
+            alpha: 0,
+            scale: 0.1,
+            duration: 500,
+            repeat: 0,
+            onComplete: () => {
+                my.sprite.player.alpha = 1; // reset alpha
+                my.sprite.player.setScale(1); // reset scale
+                this.playerDead = false; // reset dead state
+                my.sprite.player.setPosition(this.spawnPoint[0], this.spawnPoint[1]); // respawn at last checkpoint
+            }
+        });
+        this.inputLocked = true;
+        this.time.delayedCall(750, () => {
+            this.inputLocked = false;
+            this.respawning = false; // Reset respawning flag
+        });
     }
 
     updateSafeGround(groundedNow) {
