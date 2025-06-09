@@ -347,8 +347,11 @@ class Platformer extends Phaser.Scene {
         });
 
         // Add enemies
-        //const basicEnemy1 = this.createEnemy(450, 400, 'tile_0022.png', this.enemyGroup, false, "enemy_1", 50);
-        //const flyingEnemy1 = this.createEnemy(300, 100, 'tile_0025.png', this.flyingEnemyGroup, true, "flying_enemy_1", 75);
+        const flyingEnemy1 = this.createEnemy(600, 100, 'tile_0025.png', this.flyingEnemyGroup, true, "flying_enemy_1", 75);
+        const basicEnemy1 = this.createEnemy(650, 350, 'tile_0022.png', this.enemyGroup, false, "enemy_1", 50);
+        const basicEnemy2 = this.createEnemy(1000, 150, 'tile_0022.png', this.enemyGroup, false, "enemy_2", 50);
+        const basicEnemy3 = this.createEnemy(1300, 150, 'tile_0022.png', this.enemyGroup, false, "enemy_3", 50);
+        const basicEnemy4 = this.createEnemy(1550, 150, 'tile_0022.png', this.enemyGroup, false, "enemy_4", 50);
 
         // Remove defeated enemies
         [this.enemyGroup, this.flyingEnemyGroup].forEach(group => {
@@ -400,6 +403,12 @@ class Platformer extends Phaser.Scene {
             }
         });
 
+        this.input.keyboard.on('keydown-R', () => {
+            my.sprite.player.setVelocity(0, 0); // reset velocity
+            my.sprite.player.setAcceleration(0, 0); // reset acceleration
+            my.sprite.player.setDrag(0, 0); // reset drag
+            my.sprite.player.setPosition(this.spawnPoint[0], this.spawnPoint[1]); // respawn at last checkpoint
+        });
     }
 
     setupAudio() {
@@ -1145,7 +1154,6 @@ class Platformer extends Phaser.Scene {
                 [this.flyingEnemyGroup].forEach(group => {
                     group.getChildren().forEach(enemy => enemy.body.checkCollision.none = true);
                 });
-
                 my.sprite.player.setPosition(this.spawnPoint[0], this.spawnPoint[1]); // respawn at last checkpoint
             }
         });
