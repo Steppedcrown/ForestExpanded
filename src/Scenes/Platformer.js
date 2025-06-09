@@ -161,54 +161,47 @@ class Platformer extends Phaser.Scene {
     -------------------------------------------------- GAME SETUP --------------------------------------------------
     ***************************************************************************************************************/
     setupEnemies() {
+        // Load defeated enemies from localStorage (at the top)
+        const defeated = new Set(JSON.parse(localStorage.getItem('defeatedEnemies') || '[]'));
+
         // Create enemy group
         this.enemyGroup = this.physics.add.group({
             immovable: true,
             allowGravity: false
         });
 
-        // Add enemy collision handling
+        // Add enemies
+        const enemy = this.enemyGroup.create(200, 200, 'platformer_characters', 'tile_0022.png');
+        enemy.setOrigin(0.5, 1); // Set origin to center bottom
+        enemy.body.setSize(enemy.width, enemy.height); // Modify size to fit sprite
+        enemy._id = "enemy_00"; // Assign ID
+
+        // Remove defeated enemies
+        if (defeated.has(enemy._id)) {
+            enemy.destroy();
+        }
+
+        // Add enemy collision logic
         this.physics.add.collider(my.sprite.player, this.enemyGroup, (player, enemy) => {
+            const enemyId = enemy._id;
+
             if (player.body.velocity.y >= 0 && enemy.body.touching.up && player.body.touching.down) {
-                const enemyId = `enemy_${Math.round(enemy.x)}_${Math.round(enemy.y)}`;
-                this.defeatedEnemies = JSON.parse(localStorage.getItem('defeatedEnemies'));
-                this.defeatedEnemies = new Set(this.defeatedEnemies || []); // Initialize if null
+                // Save defeat to localStorage
+                const current = new Set(JSON.parse(localStorage.getItem('defeatedEnemies') || '[]'));
+                current.add(enemyId);
+                localStorage.setItem('defeatedEnemies', JSON.stringify([...current]));
 
-                this.defeatedEnemies.add(enemyId); // e.g., 'enemy_32_240'
-                console.log(enemyId);
-
-                // Save to localStorage
-                localStorage.setItem('defeatedEnemies', JSON.stringify([...this.defeatedEnemies]));
-
-                // Landed on top of enemy
+                // Enemy defeated
                 enemy.destroy();
-
-                // Bounce player upward
-                player.setVelocityY(-200); // Adjust for bounce height
-
-                // Play jump sound
+                player.setVelocityY(-200);
                 this.jumpSound.play();
             } else {
-                // Hit from side or bottom = player death
+                // Player hit side or bottom = death
                 this.playerDead = true;
             }
         });
-
-        // Add enemies
-        const enemy = this.enemyGroup.create(200, 200, 'platformer_characters', 'tile_0022.png');
-        enemy.setOrigin(0.5, 1); // Feet on ground
-        enemy.body.setSize(enemy.width, enemy.height); // Adjust hitbox if needed
-
-        // Remove defeated enemies
-        const defeated = new Set(JSON.parse(localStorage.getItem('defeatedEnemies')));
-        if (defeated && defeated.size > 0) {
-            this.enemyGroup.getChildren().forEach(enemy => {
-                if (defeated.has(enemy.id)) {
-                    enemy.destroy(); // Destroy the object
-                }
-            });
-        }
     }
+
 
     setupInput() {
         // Input handling
