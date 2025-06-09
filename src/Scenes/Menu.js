@@ -17,7 +17,8 @@ class Menu extends Phaser.Scene {
         let controlText = "a/d: Move Left/Right\n\n" +
                       "space: Jump\n\n" +
                       "esc: Pause\n\n" +
-                      "r: Respawn at Checkpoint\n\n";
+                      "r: Respawn at Checkpoint\n\n" +
+                      "p: Skip to end of level\n\n";
         this.controls = this.add.bitmapText(centerX - 500, centerY - 10, 'myFont', controlText, 16).setOrigin(0.5, 0).setVisible(false);
 
         // Credits

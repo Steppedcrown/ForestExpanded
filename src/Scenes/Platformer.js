@@ -16,7 +16,8 @@ class Platformer extends Phaser.Scene {
 
         // Spawn points
         this.spawnPoint = [430, 400]; // beginning spawn point
-        //this.spawnPoint = [2005, 100]; // end spawn point
+        this.endPoint = [250, 500]; // end spawn point
+        //this.spawnPoint = [2005, 100]; // Inside mountain spawn point
 
         // Game states
         this.isGameOver = false;
@@ -408,6 +409,13 @@ class Platformer extends Phaser.Scene {
             my.sprite.player.setAcceleration(0, 0); // reset acceleration
             my.sprite.player.setDrag(0, 0); // reset drag
             my.sprite.player.setPosition(this.spawnPoint[0], this.spawnPoint[1]); // respawn at last checkpoint
+        });
+
+        this.input.keyboard.on('keydown-P', () => {
+            my.sprite.player.setVelocity(0, 0); // reset velocity
+            my.sprite.player.setAcceleration(0, 0); // reset acceleration
+            my.sprite.player.setDrag(0, 0); // reset drag
+            my.sprite.player.setPosition(this.endPoint[0], this.endPoint[1]); // respawn at last checkpoint
         });
     }
 
