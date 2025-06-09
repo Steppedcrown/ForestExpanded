@@ -142,8 +142,10 @@ class Platformer extends Phaser.Scene {
         }
 
         // Overlay Title screen
-        this.inputLocked = true; // Lock input initially
-        this.scene.launch('menu'); // Launch title over this scene
+        if (!this.scene.isActive('menu')) {
+            this.inputLocked = true; // Lock input initially
+            this.scene.launch('menu'); // Launch title over this scene
+        }
     }
 
     update(time, delta) {
@@ -292,8 +294,16 @@ class Platformer extends Phaser.Scene {
     }
 
     moveGroundEnemy(enemy) {
+        if (this.inputLocked) { // prevent movement while input is locked
+            enemy.setVelocity(0);
+            return;
+        }
+
         const body = enemy.body;
         let turned = false;
+
+        // Always apply movement when not locked
+        enemy.setVelocityX(enemy.speed * enemy.direction);
 
         // Flip sprite based on direction
         enemy.setFlipX(enemy.direction > 0);
@@ -412,7 +422,7 @@ class Platformer extends Phaser.Scene {
             if (!this.scene.isActive('PauseOverlay')) {
                 this.click.play(); // Play button click sound
                 this.scene.launch('PauseOverlay', { gameSceneKey: this.scene.key });
-                this.scene.pause(); // Pause the current game scene
+                this.inputLocked = true; // Lock input while paused
             }
         });
 

@@ -71,16 +71,42 @@ class Menu extends Phaser.Scene {
         };
 
         if (localStorage.getItem('savedCheckpoint')) {
-            makeButton('[ Continue ]', centerY, () => this.fadeOutAndStart());
+            makeButton('[ Continue ]', centerY, () => {
+                this.input.enabled = false; // Prevent double clicking
+                this.tweens.add({
+                    targets: this.cameras.main,
+                    alpha: 0,               // Fade to invisible
+                    duration: 800,
+                    ease: 'Linear',
+                    onComplete: () => {
+                        this.scene.resume('level1');   // Resume level1 if it was paused
+                        this.scene.get('level1').inputLocked = false;   // Unlock input
+                        this.scene.stop();             // Remove the menu overlay
+                    }
+                });
+            });
         }
 
         // New game Button
         makeButton('[ New Game ]', centerY + this.offsetY, () => {
-            this.registry.set('playerScore', 0); // Reset score
-            let highScore = parseInt(localStorage.getItem('highScore')) || 0; // Save high score
-            localStorage.clear(); // Clear local storage
-            localStorage.setItem('highScore', highScore); // Reset high score
-            this.fadeOutAndStart();
+            this.input.enabled = false;
+
+            this.tweens.add({
+                targets: this.cameras.main,
+                alpha: 0,
+                duration: 800,
+                ease: 'Linear',
+                onComplete: () => {
+                    // Reset and restart level
+                    this.registry.set('playerScore', 0);
+                    let highScore = parseInt(localStorage.getItem('highScore')) || 0;
+                    localStorage.clear();
+                    localStorage.setItem('highScore', highScore); // Reset high score
+                    this.scene.start('level1');
+                    this.scene.get('level1').inputLocked = false;
+                    this.scene.stop(); // stop menu
+                }
+            });
         });
 
         // Controls
