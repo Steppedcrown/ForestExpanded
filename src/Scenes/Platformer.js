@@ -80,6 +80,7 @@ class Platformer extends Phaser.Scene {
         my.sprite.player.body.setSize(14, 16).setOffset(6, 6);
         my.sprite.player.setDepth(1);
         my.sprite.player.setOrigin(0.5, 1); // Origin to center bottom
+        this.lastSafePosition = this.spawnPoint;
 
         // Enable collision handling
         this.physics.add.collider(my.sprite.player, this.groundLayer);
@@ -106,6 +107,19 @@ class Platformer extends Phaser.Scene {
         this.setupInput();
         this.setupAudio();
         this.setupVFX();
+
+        // Load saved game
+        const saved = localStorage.getItem('savedCheckpoint');
+        if (saved) {
+            const checkpoint = JSON.parse(saved);
+            
+            if (checkpoint.scene === this.scene.key) {
+                my.sprite.player.x = checkpoint.spawnX;
+                my.sprite.player.y = checkpoint.spawnY;
+                this.registry.set('playerScore', checkpoint.score);
+                my.sprite.player.setPosition(checkpoint.spawnX, checkpoint.spawnY);
+            }
+        }
     }
 
     update(time, delta) {
@@ -127,8 +141,13 @@ class Platformer extends Phaser.Scene {
         // Check for off-map
         this.handleRespawn();
 
+        // Update if player is on safe ground and save
+        this.updateSafeGround(groundedNow);
+
         // Update for next frame
         this.wasGrounded = groundedNow;
+
+        this.saveGame();
     }
 
     /*************************************************************************************************************** 
@@ -358,9 +377,53 @@ class Platformer extends Phaser.Scene {
 
         // Create a Phaser group out of the array this.coins
         // This will be used for collision detection below.
-        this.coinGroup = this.add.group(this.coins);
-        this.diamondGroup = this.add.group(this.diamonds);
+        this.coinGroup = this.add.group();
+        this.diamondGroup = this.add.group();
         this.checkpoints = this.add.group(this.checkpoints);
+
+        this.coins.forEach(obj => {
+            obj.id = `coin_${Math.round(obj.x)}_${Math.round(obj.y)}`; // e.g., 'coin_32_240'
+            this.coinGroup.add(obj); // Add to coin group
+        });
+        this.diamonds.forEach(obj => {
+            obj.id = `diamond_${Math.round(obj.x)}_${Math.round(obj.y)}`; // e.g., 'diamond_32_240'
+            obj.defaultY = obj.y; // Store default Y position for bobbing
+            this.diamondGroup.add(obj); // Add to diamond group
+        });
+
+        const collected = new Set(JSON.parse(localStorage.getItem('collectedItems')));
+        console.log("Collected items from localStorage: ", collected);
+        if (collected && collected.size > 0) {
+            [this.coins, this.diamonds].forEach(group => {
+                group.forEach(obj => {
+                    //const id = `${obj.name}_${Math.round(obj.x)}_${Math.round(obj.y)}`;
+                    console.log("Checking collected item: " + obj.id);
+                    if (collected.has(obj.id)) {
+                        console.log("Removing collected item: " + obj.id);
+                        //obj.setActive(false, false); // Deactivate the object
+                        //obj.setVisible(false); // Hide the object
+                        obj.destroy(); // Destroy the object
+                    }
+                });
+            });
+        }
+
+        const checkpointX = localStorage.getItem('checkpointX');
+        const checkpointY = localStorage.getItem('checkpointY');
+        if (checkpointX && checkpointY) {
+            this.checkpoints.getChildren().forEach(flag => {
+                if (flag.x == checkpointX && flag.y == checkpointY) {
+                    this.spawnPoint = [flag.x, flag.y]; // Update spawn point to this flag 
+                    this.tweens.add({
+                        targets: flag,
+                        y: flag.y - 8,
+                        duration: 700,
+                        ease: 'Linear'
+                    });
+                    flag.raised = true; // Mark this flag as raised
+                }
+            });
+        }
 
         // TODO: Add coin collision handler
         // Handle collision detection with coins
@@ -383,6 +446,16 @@ class Platformer extends Phaser.Scene {
                 onComplete: () => coin.destroy()
             });
             this.updateScore(1); // increment score
+
+            const coinId = `coin_${Math.round(coin.x)}_${Math.round(coin.y)}`;
+            console.log("Collected coin: " + coinId);
+            this.collectedItems = JSON.parse(localStorage.getItem('collectedItems'));
+            this.collectedItems = new Set(this.collectedItems || []); // Initialize if null
+
+            this.collectedItems.add(coinId); // e.g., 'coin_32_240'
+
+            // Save to localStorage
+            localStorage.setItem('collectedItems', JSON.stringify([...this.collectedItems]));
         });
         this.physics.add.overlap(my.sprite.player, this.diamondGroup, (player, diamond) => {
             diamond.body.enable = false;
@@ -404,10 +477,23 @@ class Platformer extends Phaser.Scene {
                 onComplete: () => diamond.destroy()
             });
             this.updateScore(5); // increment score
+
+            const diamondId = `diamond_${Math.round(diamond.x)}_${Math.round(diamond.defaultY)}`; // Use defaultY for bobbing
+            console.log("Collected diamond: " + diamondId);
+            this.collectedItems = JSON.parse(localStorage.getItem('collectedItems'));
+            this.collectedItems = new Set(this.collectedItems || []); // Initialize if null
+
+            this.collectedItems.add(diamondId); // e.g., 'coin_32_240'
+
+            // Save to localStorage
+            localStorage.setItem('collectedItems', JSON.stringify([...this.collectedItems]));
         });
         this.physics.add.overlap(my.sprite.player, this.checkpoints, (player, flag) => {
-            if (this.spawnPoint[0] != flag.x && this.spawnPoint[1] != flag.y) { // check if this is a new flag
+            // Check if at new checkpoint
+            if (this.spawnPoint[0] != flag.x && this.spawnPoint[1] != flag.y) {
                 this.spawnPoint = [flag.x, flag.y]; // Update spawn point to this flag
+                localStorage.setItem('checkpointX', flag.x);
+                localStorage.setItem('checkpointY', flag.y);
                 this.tweens.add({
                     targets: flag,
                     y: flag.y - 8,
@@ -428,6 +514,8 @@ class Platformer extends Phaser.Scene {
                     }
                 });
             }
+
+            // If at end of level, trigger game over
             if (flag.data.values.endFlag) {
                 if (!this.isGameOver) {
                     this.isGameOver = true; // prevent multiple triggers
@@ -798,9 +886,7 @@ class Platformer extends Phaser.Scene {
 
     handleRespawn(dead=false) {
         // If below world
-        if(my.sprite.player.y > this.scale.height) {
-            dead = true; // set dead to true
-        }
+        if(my.sprite.player.y > this.scale.height) dead = true;
 
         if (dead) {
             // If dead, respawn at last safe position
@@ -813,5 +899,28 @@ class Platformer extends Phaser.Scene {
                 this.inputLocked = false;
             });
         }
+    }
+
+    updateSafeGround(groundedNow) {
+        // If player is grounded and on safe ground, update last safe position
+        if (groundedNow) {
+            const tile = this.groundLayer.getTileAtWorldXY(my.sprite.player.x, my.sprite.player.y + my.sprite.player.height / 2);
+            //console.log(tile.properties);
+            if (tile && tile.properties.safeGround) {
+                this.lastSafePosition = [my.sprite.player.x, my.sprite.player.y];
+                //console.log("Safe spawn point updated to: ", this.lastSafePosition);
+            }
+        }
+    }
+
+    saveGame() {
+        // Save to localStorage
+        localStorage.setItem('savedCheckpoint', JSON.stringify({
+            scene: this.scene.key,
+            spawnX: this.lastSafePosition[0],
+            spawnY: this.lastSafePosition[1],
+            score: this.registry.get('playerScore'),
+            timestamp: Date.now()
+        }));
     }
 }
