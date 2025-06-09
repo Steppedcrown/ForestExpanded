@@ -44,6 +44,7 @@ class Menu extends Phaser.Scene {
 
         // Start Button
         makeButton('[ New Game ]', centerY + offsetY, () => {
+            this.registry.set('playerScore', 0); // Reset score
             localStorage.removeItem('savedCheckpoint'); // Clear checkpoint
             localStorage.removeItem('checkpointX'); // Clear any saved checkpoint
             localStorage.removeItem('checkpointY'); // Clear any saved checkpoint

@@ -57,6 +57,7 @@ class Platformer extends Phaser.Scene {
 
         // Create layers
         this.groundLayer = this.map.createLayer("Ground-n-Platforms", this.tileset, 0, 0);
+        this.invisibleLayer = this.map.createLayer("Invisible", this.tileset, 0, 0).setVisible(false);
         this.undergroundLayer = this.map.createLayer("Underground", this.tileset, 0, 0);
         this.detailLayer = this.map.createLayer("Details", this.tileset, 0, 0);
         this.waterfallLayer = this.map.createLayer("Waterfalls", this.tileset, 0, 0);
@@ -74,6 +75,9 @@ class Platformer extends Phaser.Scene {
         this.groundLayer.setCollisionByProperty({
             collides: true
         });
+        this.invisibleLayer.setCollisionByProperty({
+            collides: true
+        });
 
         // set up player avatar
         my.sprite.player = this.physics.add.sprite(this.spawnPoint[0], this.spawnPoint[1], "platformer_characters", "tile_0000.png");
@@ -86,6 +90,7 @@ class Platformer extends Phaser.Scene {
 
         // Enable collision handling
         this.physics.add.collider(my.sprite.player, this.groundLayer);
+        this.physics.add.collider(my.sprite.player, this.invisibleLayer);
 
         // Bounds
         this.physics.world.setBounds(0, -0, this.map.widthInPixels, this.map.heightInPixels);
@@ -475,9 +480,12 @@ class Platformer extends Phaser.Scene {
         my.vfx.collect.stop();
 
         // Bubbles
-        this.createBubbles(150, 240, 315, 375);
-        this.createBubbles(1050, 1270, 370, 375);
-        this.createBubbles(1275, 1375, 305, 375);
+        this.createBubbles(330, 405, 155, 155);
+        this.createBubbles(330, 500, 545, 545);
+        this.createBubbles(510, 600, 450, 545);
+        this.createBubbles(1160, 1240, 515, 545);
+        this.createBubbles(1410, 1640, 500, 545);
+        this.createBubbles(1645, 1725, 440, 545);
     }
 
     setupScore() {
@@ -485,7 +493,7 @@ class Platformer extends Phaser.Scene {
         let playerScore = this.registry.get('playerScore') || 0;
         this.registry.set('playerScore', playerScore);
         
-        let xPos = 1225;
+        let xPos = 1200;
         let yPos = 720;
         let fontSize = 12;
         // Add score text
@@ -819,14 +827,16 @@ class Platformer extends Phaser.Scene {
             const axis = props.axis || 'y'; // Default to vertical movement
             const range = props.range || 100;
             const speed = props.speed || 50;
+            const reverse = props.reverse || false;
 
             // Calculate tween duration
             const duration = Math.abs((range / speed) * 1000);
 
             // Determine target position
             const targetPos = (axis === 'x')
-                ? { x: platform.x + range }
-                : { y: platform.y - range }; // up if y
+                ? { x: platform.x + (reverse ? -range : range) }
+                : { y: platform.y + (reverse ? range : -range) }; // down if reversed
+
 
             // Tween to move platform
             this.tweens.add({
