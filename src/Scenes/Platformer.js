@@ -140,6 +140,10 @@ class Platformer extends Phaser.Scene {
                 my.sprite.player.setPosition(checkpoint.spawnX, checkpoint.spawnY);
             }
         }
+
+        // Overlay Title screen
+        this.inputLocked = true; // Lock input initially
+        this.scene.launch('menu'); // Launch title over this scene
     }
 
     update(time, delta) {
@@ -219,6 +223,9 @@ class Platformer extends Phaser.Scene {
             delay: 200, // Reduce delay for more responsiveness
             loop: true,
             callback: () => {
+                // Skip pathfinding when input is locked
+                if (this.inputLocked) return;
+
                 const start = this.worldToTile(enemy.x, enemy.y);
                 const end = this.worldToTile(my.sprite.player.x, my.sprite.player.y);
 
@@ -247,6 +254,11 @@ class Platformer extends Phaser.Scene {
     }
 
     moveFlyingEnemy(enemy) {
+        if (this.inputLocked) { // prevent movement while input is locked
+            enemy.setVelocity(0);
+            return;
+        }
+
         if (!enemy.path || enemy.pathIndex >= enemy.path.length) {
             // Move directly toward the player instead
             const dx = my.sprite.player.x - enemy.x;
@@ -979,11 +991,9 @@ class Platformer extends Phaser.Scene {
 
         if (restart) {
             this.registry.set('playerScore', 0); // Reset score
-            localStorage.removeItem('savedCheckpoint'); // Clear checkpoint
-            localStorage.removeItem('checkpointX'); // Clear any saved checkpoint
-            localStorage.removeItem('checkpointY'); // Clear any saved checkpoint
-            localStorage.removeItem('defeatedEnemies'); // Clear defeated enemies
-            localStorage.removeItem('collectedItems'); // Clear collected items 
+            let highScore = parseInt(localStorage.getItem('highScore')) || 0; // Save high score
+            localStorage.clear(); // Clear local storage
+            localStorage.setItem('highScore', highScore); // Reset high score
             this.scene.stop('level1');
             this.scene.start('level1');
         } else {

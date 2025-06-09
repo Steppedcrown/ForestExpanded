@@ -7,6 +7,9 @@ class Menu extends Phaser.Scene {
         const centerX = this.cameras.main.width / 2;
         const centerY = this.cameras.main.height / 2;
 
+        // Overlay background
+        this.add.rectangle(0, 0, centerX * 2, centerY * 2, 0x000000, 0.6).setOrigin(0);
+
         // Title
         this.add.bitmapText(centerX, centerY - 100, 'myFont', 'Forest of Advantis', 24).setOrigin(0.5);
 
@@ -68,19 +71,16 @@ class Menu extends Phaser.Scene {
         };
 
         if (localStorage.getItem('savedCheckpoint')) {
-            makeButton('[ Continue ]', centerY, () => this.scene.start('level1'));
+            makeButton('[ Continue ]', centerY, () => this.fadeOutAndStart());
         }
 
         // New game Button
         makeButton('[ New Game ]', centerY + this.offsetY, () => {
             this.registry.set('playerScore', 0); // Reset score
-            localStorage.removeItem('savedCheckpoint'); // Clear checkpoint
-            localStorage.removeItem('checkpointX'); // Clear any saved checkpoint
-            localStorage.removeItem('checkpointY'); // Clear any saved checkpoint
-            localStorage.removeItem('defeatedEnemies'); // Clear defeated enemies
-            localStorage.removeItem('collectedItems'); // Clear collected items 
-            this.scene.stop('level1');
-            this.scene.start('level1');
+            let highScore = parseInt(localStorage.getItem('highScore')) || 0; // Save high score
+            localStorage.clear(); // Clear local storage
+            localStorage.setItem('highScore', highScore); // Reset high score
+            this.fadeOutAndStart();
         });
 
         // Controls
@@ -107,6 +107,14 @@ class Menu extends Phaser.Scene {
         makeButton('[ Reset Browser Cache ]', centerY + this.offsetY + this.incrementY, () => {
             localStorage.clear();
             this.displayHighScore.setText('High Score: 0');
+        });
+    }
+
+    fadeOutAndStart() {
+        this.cameras.main.fadeOut(800, 0, 0, 0);
+        this.cameras.main.once('camerafadeoutcomplete', () => {
+            this.scene.get('level1').inputLocked = false;
+            this.scene.stop();
         });
     }
 }
