@@ -13,6 +13,20 @@ class Menu extends Phaser.Scene {
         // High Score Display
         this.displayHighScore = this.add.bitmapText(50, 50, 'myFont', 'High Score: ' + (parseInt(localStorage.getItem('highScore')) || 0), 16);
 
+        // Controls text
+        let controlText = "a/d: Move Left/Right\n\n" +
+                      "space: Jump\n\n" +
+                      "esc: Pause\n\n" +
+                      "r: Respawn at Checkpoint\n\n";
+        this.controls = this.add.bitmapText(centerX - 500, centerY - 10, 'myFont', controlText, 16).setOrigin(0.5, 0).setVisible(false);
+
+        // Credits
+        let creditsText = "Created by: Aiden Waldorf\n\n" + 
+        "Visuals by Kenney Assets\n\n" +
+        "Audio: Mixkit, Pixabay\n\n" +
+        "(See README for full attributions)\n\n";
+        this.credits = this.add.bitmapText(centerX + 500, centerY - 10, 'myFont', creditsText, 16).setOrigin(0.5, 0).setVisible(false);
+
         // Click sfx
         this.click = this.sound.add('uiClick', {
             volume: 0.2
@@ -54,18 +68,28 @@ class Menu extends Phaser.Scene {
             this.scene.start('level1');
         });
 
+        // Controls
+        makeButton('[ Controls ]', centerY + offsetY + 30, () => {
+            this.controls.setVisible(!this.controls.visible);
+        });
+
+        // Credits
+        makeButton('[  Credits  ]', centerY + offsetY + 60, () => {
+            this.credits.setVisible(!this.credits.visible);
+        });
+
         // Quit Button
-        makeButton('[ Quit Game ]', centerY + offsetY + 30, () => {
+        makeButton('[ Quit Game ]', centerY + offsetY + 90, () => {
             window.close();
             window.open('', '_self')?.close();
         });
 
-        makeButton('[ Reset High Score ]', centerY + 120, () => {
+        makeButton('[ Reset High Score ]', centerY + offsetY + 150, () => {
             localStorage.setItem('highScore', 0);
             this.displayHighScore.setText('High Score: 0');
         });
 
-        makeButton('[ Reset Browser Cache ]', centerY + 150, () => {
+        makeButton('[ Reset Browser Cache ]', centerY + offsetY + 180, () => {
             localStorage.clear();
             this.displayHighScore.setText('High Score: 0');
         });
