@@ -377,16 +377,28 @@ class Platformer extends Phaser.Scene {
 
         // Create a Phaser group out of the array this.coins
         // This will be used for collision detection below.
-        this.coinGroup = this.add.group(this.coins);
-        this.diamondGroup = this.add.group(this.diamonds);
+        this.coinGroup = this.add.group();
+        this.diamondGroup = this.add.group();
         this.checkpoints = this.add.group(this.checkpoints);
 
+        this.coins.forEach(obj => {
+            obj.id = `coin_${Math.round(obj.x)}_${Math.round(obj.y)}`; // e.g., 'coin_32_240'
+            this.coinGroup.add(obj); // Add to coin group
+        });
+        this.diamonds.forEach(obj => {
+            obj.id = `diamond_${Math.round(obj.x)}_${Math.round(obj.y)}`; // e.g., 'diamond_32_240'
+            this.diamondGroup.add(obj); // Add to diamond group
+        });
+
         const collected = new Set(JSON.parse(localStorage.getItem('collectedItems')));
-        if (collected) {
-            [this.coinGroup, this.diamondGroup].forEach(group => {
-                group.getChildren().forEach(obj => {
-                    const id = `${obj.name}_${Math.floor(obj.x)}_${Math.floor(obj.y)}`;
-                    if (collected.has(id)) {
+        console.log("Collected items from localStorage: ", collected);
+        if (collected && collected.size > 0) {
+            [this.coins, this.diamonds].forEach(group => {
+                group.forEach(obj => {
+                    //const id = `${obj.name}_${Math.round(obj.x)}_${Math.round(obj.y)}`;
+                    console.log("Checking collected item: " + obj.id);
+                    if (collected.has(obj.id)) {
+                        console.log("Removing collected item: " + obj.id);
                         obj.destroy(); // Remove collected items
                     }
                 });
@@ -432,7 +444,8 @@ class Platformer extends Phaser.Scene {
             });
             this.updateScore(1); // increment score
 
-            const coinId = `coin_${Math.floor(coin.x)}_${Math.floor(coin.y)}`;
+            const coinId = `coin_${Math.round(coin.x)}_${Math.round(coin.y)}`;
+            console.log("Collected coin: " + coinId);
             if (!this.collectedItems) {
                 this.collectedItems = new Set();
             }
@@ -463,7 +476,8 @@ class Platformer extends Phaser.Scene {
             });
             this.updateScore(5); // increment score
 
-            const diamondId = `diamond_${Math.floor(diamond.x)}_${Math.floor(diamond.y)}`;
+            const diamondId = `diamond_${Math.round(diamond.x)}_${Math.round(diamond.y)}`;
+            console.log("Collected diamond: " + diamondId);
             if (!this.collectedItems) {
                 this.collectedItems = new Set();
             }
