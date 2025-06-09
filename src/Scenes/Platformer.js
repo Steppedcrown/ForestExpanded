@@ -101,15 +101,26 @@ class Platformer extends Phaser.Scene {
         const bgColor = this.cache.tilemap.get("platformer-level-1").data.backgroundcolor;
         if (bgColor) this.cameras.main.setBackgroundColor(bgColor);
 
-        // Set up game
+        // Set up UI
         this.addButtons();
         this.setupScore();
-        this.addObjects();
-        this.addMovingPlatforms();
+
+        // Juice
         this.setupInput();
         this.setupAudio();
         this.setupVFX();
+
+        // Game objects
+        this.addObjects();
+        this.addMovingPlatforms();
         this.setupEnemies();
+
+        // Enable pathfinding
+        this.initEasyStar();
+        this.flyingEnemyGroup.getChildren().forEach(enemy => {
+            this.findPath(enemy);
+        });
+
 
         // Load saved game
         const saved = localStorage.getItem('savedCheckpoint');
@@ -147,6 +158,11 @@ class Platformer extends Phaser.Scene {
         // Update if player is on safe ground
         this.updateSafeGround(groundedNow);
 
+        // Handle enemy movement
+        this.flyingEnemyGroup.getChildren().forEach(enemy => {
+            this.moveFlyingEnemy(enemy);
+        });
+
         // Respawn if player is dead
         if (this.playerDead && !this.respawning) this.handleRespawn();
 
@@ -155,6 +171,81 @@ class Platformer extends Phaser.Scene {
 
         // Update for next frame
         this.wasGrounded = groundedNow;
+    }
+
+    /*************************************************************************************************************** 
+    -------------------------------------------------- Pathfinding -------------------------------------------------
+    ***************************************************************************************************************/
+
+    initEasyStar() {
+        this.easystar = new EasyStar.js();
+
+        // Create a grid where 0 = empty, 1 = blocked
+        const grid = [];
+        for (let y = 0; y < this.map.height; y++) {
+            const row = [];
+            for (let x = 0; x < this.map.width; x++) {
+                const tile = this.groundLayer.getTileAt(x, y);
+                row.push(tile ? 1 : 0); // 1 = wall, 0 = empty space
+            }
+            grid.push(row);
+        }
+
+        this.easystar.setGrid(grid);
+        this.easystar.setAcceptableTiles([0]); // Only allow movement through empty space
+        this.easystar.enableDiagonals(); // Diagonal movement
+    }
+
+    worldToTile = (x, y) => ({
+        x: Math.floor(x / this.map.tileWidth),
+        y: Math.floor(y / this.map.tileHeight)
+    });
+
+    tileToWorld = (tx, ty) => ({
+        x: tx * this.map.tileWidth + this.map.tileWidth / 2,
+        y: ty * this.map.tileHeight + this.map.tileHeight / 2
+    });
+
+    findPath(enemy) {
+        this.time.addEvent({
+            delay: 1000, // every 1 second
+            loop: true,
+            callback: () => {
+                const start = this.worldToTile(enemy.x, enemy.y);
+                const end = this.worldToTile(my.sprite.player.x, my.sprite.player.y);
+
+                this.easystar.findPath(start.x, start.y, end.x, end.y, path => {
+                    if (path && path.length > 1) {
+                        enemy.path = path;
+                        enemy.pathIndex = 1;
+                    }
+                });
+
+                this.easystar.calculate(); // triggers pathfinding
+            }
+        });
+    }
+
+    moveFlyingEnemy(enemy, speed = 80) {
+        if (!enemy.path || enemy.pathIndex >= enemy.path.length) {
+            enemy.setVelocity(0);
+            return;
+        }
+
+        const targetTile = enemy.path[enemy.pathIndex];
+        const { x: worldX, y: worldY } = this.tileToWorld(targetTile.x, targetTile.y);
+
+        const dx = worldX - enemy.x;
+        const dy = worldY - enemy.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist < 4) {
+            enemy.setVelocity(0);
+            enemy.pathIndex++;
+        } else {
+            const angle = Math.atan2(dy, dx);
+            enemy.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+        }
     }
 
     /*************************************************************************************************************** 
@@ -169,17 +260,30 @@ class Platformer extends Phaser.Scene {
             immovable: true,
             allowGravity: false
         });
+        this.flyingEnemyGroup = this.physics.add.group({
+            immovable: true,
+            allowGravity: false
+        });
 
         // Add enemies
-        const enemy = this.enemyGroup.create(200, 200, 'platformer_characters', 'tile_0022.png');
-        enemy.setOrigin(0.5, 1); // Set origin to center bottom
-        enemy.body.setSize(enemy.width, enemy.height); // Modify size to fit sprite
-        enemy._id = "enemy_00"; // Assign ID
+        const basicEnemy = this.enemyGroup.create(200, 200, 'platformer_characters', 'tile_0022.png');
+        basicEnemy.setOrigin(0.5, 1); // Set origin to center bottom
+        basicEnemy.body.setSize(basicEnemy.width, basicEnemy.height); // Modify size to fit sprite
+        basicEnemy._id = "enemy_00"; // Assign ID
+
+        const flyingEnemy = this.flyingEnemyGroup.create(100, 100, 'platformer_characters', 'tile_0025.png');
+        flyingEnemy.path = null;
+        flyingEnemy.pathIndex = 0;
+        flyingEnemy.setOrigin(0.5);
+        flyingEnemy.setCollideWorldBounds(true);
+        flyingEnemy._id = "enemy_01"; // Assign ID
 
         // Remove defeated enemies
-        if (defeated.has(enemy._id)) {
-            enemy.destroy();
-        }
+        [basicEnemy, flyingEnemy].forEach(enemy => {
+            if (defeated.has(enemy._id)) {
+                enemy.destroy(); // Remove defeated enemy
+            }
+        });
 
         // Add enemy collision logic
         this.physics.add.collider(my.sprite.player, this.enemyGroup, (player, enemy) => {
