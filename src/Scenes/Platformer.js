@@ -1073,13 +1073,25 @@ class Platformer extends Phaser.Scene {
                 my.sprite.player.alpha = 1; // reset alpha
                 my.sprite.player.setScale(1); // reset scale
                 this.playerDead = false; // reset dead state
+
+                // Disable collision right after respawn
+                [this.enemyGroup, this.flyingEnemyGroup].forEach(group => {
+                    group.getChildren().forEach(enemy => enemy.body.checkCollision.none = true);
+                });
+
                 my.sprite.player.setPosition(this.spawnPoint[0], this.spawnPoint[1]); // respawn at last checkpoint
             }
         });
+
         this.inputLocked = true;
         this.time.delayedCall(750, () => {
             this.inputLocked = false;
             this.respawning = false; // Reset respawning flag
+        });
+        this.time.delayedCall(3000, () => { // Reenable collision after respawn
+            [this.enemyGroup, this.flyingEnemyGroup].forEach(group => {
+                    group.getChildren().forEach(enemy => enemy.body.checkCollision.none = false);
+            });
         });
     }
 
