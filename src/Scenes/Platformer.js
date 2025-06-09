@@ -14,7 +14,7 @@ class Platformer extends Phaser.Scene {
         this.MAX_VELOCITY = 300; // max speed
 
         // Spawn points
-        this.spawnPoint = [75, 245]; // beginning spawn point
+        this.spawnPoint = [430, 400]; // beginning spawn point
         //this.spawnPoint = [1200, 0]; // end spawn point
 
         // Game states
@@ -50,7 +50,7 @@ class Platformer extends Phaser.Scene {
 
     create() {
         // Create a new tilemap game object
-        this.map = this.add.tilemap("platformer-level-1", 18, 18, 80, 20);
+        this.map = this.add.tilemap("platformer-level-1", 18, 18, 120, 30);
 
         // Add a tileset to the map
         this.tileset = this.map.addTilesetImage("kenny_tilemap_packed", "tilemap_tiles");
@@ -340,8 +340,8 @@ class Platformer extends Phaser.Scene {
         });
 
         // Add enemies
-        const basicEnemy1 = this.createEnemy(450, 400, 'tile_0022.png', this.enemyGroup, false, "enemy_1", 50);
-        const flyingEnemy1 = this.createEnemy(300, 100, 'tile_0025.png', this.flyingEnemyGroup, true, "flying_enemy_1", 75);
+        //const basicEnemy1 = this.createEnemy(450, 400, 'tile_0022.png', this.enemyGroup, false, "enemy_1", 50);
+        //const flyingEnemy1 = this.createEnemy(300, 100, 'tile_0025.png', this.flyingEnemyGroup, true, "flying_enemy_1", 75);
 
         // Remove defeated enemies
         [this.enemyGroup, this.flyingEnemyGroup].forEach(group => {
@@ -485,8 +485,8 @@ class Platformer extends Phaser.Scene {
         let playerScore = this.registry.get('playerScore') || 0;
         this.registry.set('playerScore', playerScore);
         
-        let xPos = 1125;
-        let yPos = 505;
+        let xPos = 1225;
+        let yPos = 720;
         let fontSize = 12;
         // Add score text
         this.displayScore = this.add.bitmapText(xPos, yPos, 'myFont', 'Score: ' + this.registry.get('playerScore'), fontSize);
