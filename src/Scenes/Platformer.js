@@ -276,6 +276,25 @@ class Platformer extends Phaser.Scene {
     /*************************************************************************************************************** 
     -------------------------------------------------- GAME SETUP --------------------------------------------------
     ***************************************************************************************************************/
+
+    createEnemy(x, y, frame, group, flying, id) {
+        const enemy = group.create(x, y, 'platformer_characters', frame);
+        enemy.setOrigin(0.5, 1); // Set origin to center bottom
+        enemy.body.setSize(enemy.width, enemy.height); // Modify size to fit sprite
+        enemy.setCollideWorldBounds(true); // Ensure it doesn't go out of bounds
+
+        this.enemyCount = (this.enemyCount || 0) + 1; // Increment enemy count
+        enemy._id = id; // Assign ID based on count
+
+        if (flying) {
+            enemy.path = null; // Initialize path for flying enemies
+            enemy.pathIndex = 0; // Initialize path index
+            enemy.body.setSize(enemy.width, enemy.height / 4); // Modify size to fit sprite
+        }
+
+        return enemy;
+    }
+
     setupEnemies() {
         // Load defeated enemies from localStorage (at the top)
         const defeated = new Set(JSON.parse(localStorage.getItem('defeatedEnemies') || '[]'));
@@ -291,24 +310,16 @@ class Platformer extends Phaser.Scene {
         });
 
         // Add enemies
-        const basicEnemy = this.enemyGroup.create(200, 200, 'platformer_characters', 'tile_0022.png');
-        basicEnemy.setOrigin(0.5, 1); // Set origin to center bottom
-        basicEnemy.body.setSize(basicEnemy.width, basicEnemy.height); // Modify size to fit sprite
-        basicEnemy._id = "enemy_00"; // Assign ID
-
-        const flyingEnemy = this.flyingEnemyGroup.create(100, 100, 'platformer_characters', 'tile_0025.png');
-        flyingEnemy.path = null;
-        flyingEnemy.pathIndex = 0;
-        flyingEnemy.body.setSize(flyingEnemy.width, flyingEnemy.height / 4); // Modify size to fit sprite
-        flyingEnemy.setOrigin(0.5);
-        flyingEnemy.setCollideWorldBounds(true);
-        flyingEnemy._id = "enemy_01"; // Assign ID
+        const basicEnemy1 = this.createEnemy(200, 200, 'tile_0022.png', this.enemyGroup, false, "enemy_1");
+        const flyingEnemy1 = this.createEnemy(300, 100, 'tile_0025.png', this.flyingEnemyGroup, true, "flying_enemy_1");
 
         // Remove defeated enemies
-        [basicEnemy, flyingEnemy].forEach(enemy => {
-            if (defeated.has(enemy._id)) {
-                enemy.destroy(); // Remove defeated enemy
-            }
+        [this.enemyGroup, this.flyingEnemyGroup].forEach(group => {
+            group.getChildren().forEach(enemy => {
+                if (defeated.has(enemy._id)) {
+                    enemy.destroy(); // Remove defeated enemy
+                }
+            });
         });
 
         // Add enemy collision logic
