@@ -11,7 +11,20 @@ class Menu extends Phaser.Scene {
         this.add.bitmapText(centerX, centerY - 100, 'myFont', 'Forest of Advantis', 24).setOrigin(0.5);
 
         // High Score Display
-        this.displayHighScore = this.add.bitmapText(50, 50, 'myFont', 'High Score: ' + (parseInt(localStorage.getItem('highScore')) || 0), 16);
+        this.displayHighScore = this.add.bitmapText(100, 350, 'myFont', 'High Score: ' + (parseInt(localStorage.getItem('highScore')) || 0), 24);
+
+        // Rotate text
+        this.displayHighScore.rotation = Phaser.Math.DegToRad(-35);
+
+        // Pulsate size
+        this.tweens.add({
+            targets: this.displayHighScore,
+            scale: { from: 1, to: 1.3 },
+            duration: 800,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
 
         // Controls text
         let controlText = "a/d: Move Left/Right\n\n" +
