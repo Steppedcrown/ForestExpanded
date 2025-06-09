@@ -15,8 +15,10 @@ class Platformer extends Phaser.Scene {
         this.MAX_FALL_VELOCITY = 750; // max fall speed
 
         // Spawn points
-        this.spawnPoint = [430, 400]; // beginning spawn point
-        //this.spawnPoint = [2005, 100]; // end spawn point
+        this.DEFAULT_SPAWN_POINT = [430, 400]; // default spawn point
+        this.spawnPoint = this.DEFAULT_SPAWN_POINT; // spawn point
+        this.endPoint = [250, 500]; // end spawn point
+        //this.spawnPoint = [2005, 100]; // Inside mountain spawn point
 
         // Game states
         this.isGameOver = false;
@@ -128,16 +130,29 @@ class Platformer extends Phaser.Scene {
         });
 
         // Load saved game
-        const saved = localStorage.getItem('savedCheckpoint');
-        if (saved) {
-            const checkpoint = JSON.parse(saved);
-            
-            if (checkpoint.scene === this.scene.key) {
-                my.sprite.player.x = checkpoint.spawnX;
-                my.sprite.player.y = checkpoint.spawnY;
-                this.registry.set('playerScore', checkpoint.score);
-                my.sprite.player.setPosition(checkpoint.spawnX, checkpoint.spawnY);
+       const isNewGame = this.registry.get('newGame');
+        this.registry.set('newGame', false); // reset for future restarts
+
+        if (!isNewGame) {
+            const saved = localStorage.getItem('savedCheckpoint');
+            if (saved) {
+                const checkpoint = JSON.parse(saved);
+                
+                if (checkpoint.scene === this.scene.key) {
+                    my.sprite.player.x = checkpoint.spawnX;
+                    my.sprite.player.y = checkpoint.spawnY;
+                    this.registry.set('playerScore', checkpoint.score);
+                    my.sprite.player.setPosition(checkpoint.spawnX, checkpoint.spawnY);
+                }
             }
+        }
+
+        if (this.inputLocked === undefined) { // initialize inputLocked if not already set
+            this.inputLocked = true;
+        }
+
+        if (this.inputLocked) { // if input is locked, show the menu
+            this.scene.launch('menu');
         }
     }
 
@@ -218,6 +233,9 @@ class Platformer extends Phaser.Scene {
             delay: 200, // Reduce delay for more responsiveness
             loop: true,
             callback: () => {
+                // Skip pathfinding when input is locked
+                if (this.inputLocked) return;
+
                 const start = this.worldToTile(enemy.x, enemy.y);
                 const end = this.worldToTile(my.sprite.player.x, my.sprite.player.y);
 
@@ -246,6 +264,11 @@ class Platformer extends Phaser.Scene {
     }
 
     moveFlyingEnemy(enemy) {
+        if (this.inputLocked) { // prevent movement while input is locked
+            enemy.setVelocity(0);
+            return;
+        }
+
         if (!enemy.path || enemy.pathIndex >= enemy.path.length) {
             // Move directly toward the player instead
             const dx = my.sprite.player.x - enemy.x;
@@ -279,8 +302,16 @@ class Platformer extends Phaser.Scene {
     }
 
     moveGroundEnemy(enemy) {
+        if (this.inputLocked) { // prevent movement while input is locked
+            enemy.setVelocity(0);
+            return;
+        }
+
         const body = enemy.body;
         let turned = false;
+
+        // Always apply movement when not locked
+        enemy.setVelocityX(enemy.speed * enemy.direction);
 
         // Flip sprite based on direction
         enemy.setFlipX(enemy.direction > 0);
@@ -396,10 +427,10 @@ class Platformer extends Phaser.Scene {
         this.spaceKey = this.input.keyboard.addKey('SPACE');
 
         this.input.keyboard.on('keydown-ESC', () => {
-            if (!this.scene.isActive('PauseOverlay')) {
+            if (!this.scene.isActive('PauseOverlay') && !this.scene.isActive('menu')) {
                 this.click.play(); // Play button click sound
                 this.scene.launch('PauseOverlay', { gameSceneKey: this.scene.key });
-                this.scene.pause(); // Pause the current game scene
+                this.inputLocked = true; // Lock input while paused
             }
         });
 
@@ -408,6 +439,13 @@ class Platformer extends Phaser.Scene {
             my.sprite.player.setAcceleration(0, 0); // reset acceleration
             my.sprite.player.setDrag(0, 0); // reset drag
             my.sprite.player.setPosition(this.spawnPoint[0], this.spawnPoint[1]); // respawn at last checkpoint
+        });
+
+        this.input.keyboard.on('keydown-P', () => {
+            my.sprite.player.setVelocity(0, 0); // reset velocity
+            my.sprite.player.setAcceleration(0, 0); // reset acceleration
+            my.sprite.player.setDrag(0, 0); // reset drag
+            my.sprite.player.setPosition(this.endPoint[0], this.endPoint[1]); // respawn at last checkpoint
         });
     }
 
@@ -541,6 +579,14 @@ class Platformer extends Phaser.Scene {
         .setVisible(false) // Hide the rectangle initially
         .setDepth(this.UI_DEPTH); // Ensure it appears above other elements
 
+        this.buttonRect3 = this.add.rectangle(this.scale.width/2, this.scale.height/2 + 180, 200, 60, 0x000000, 0.5)
+        .setOrigin(0.5, 0.5)
+        .setScrollFactor(0) // Make it not scroll with the camera
+        .setVisible(false) // Hide the rectangle initially
+        .setDepth(this.UI_DEPTH); // Ensure it appears above other elements
+
+        this.rects = [this.buttonRect, this.buttonRect2, this.buttonRect3];
+
         // Display "Game Over" text
         this.gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2 - 50, "Game over", {
             fontSize: "32px",
@@ -551,6 +597,27 @@ class Platformer extends Phaser.Scene {
         .setVisible(false) // Hide the text initially
         .setDepth(this.UI_DEPTH) // Ensure it appears above other elements
         .setScrollFactor(0); // Make it not scroll with the camera
+
+        // Continue button
+        this.continueButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 20, "Resume", {
+            fontSize: "24px",
+            backgroundColor: "#ffffff",
+            color: "#000000",
+            padding: { x: 49.5, y: 10 } // Add padding around the text
+        })
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => {
+            // Play click sound
+            this.sound.play('uiClick', {
+                volume: 0.5,
+                loop: false
+            });
+            this.restartGame(false);
+        }).setOrigin(0.5, 0.5)
+        .setScrollFactor(0) // Make it not scroll with the camera
+        .setVisible(false) // Hide the button initially
+        .setInteractive(false) // Disable interaction initially
+        .setDepth(this.UI_DEPTH); // Ensure it appears above other elements
 
         // Restart button
         this.restartButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 100, "Play Again", {
@@ -573,12 +640,12 @@ class Platformer extends Phaser.Scene {
         .setInteractive(false) // Disable interaction initially
         .setDepth(this.UI_DEPTH); // Ensure it appears above other elements
 
-        // Continue button
-        this.continueButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 20, "Resume", {
+        // Title screen button
+        this.titleButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 180, "Title Screen", {
             fontSize: "24px",
             backgroundColor: "#ffffff",
             color: "#000000",
-            padding: { x: 49.5, y: 10 } // Add padding around the text
+            padding: { x: 4, y: 10 } // Add padding around the text
         })
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => {
@@ -587,12 +654,14 @@ class Platformer extends Phaser.Scene {
                 volume: 0.5,
                 loop: false
             });
-            this.restartGame(false);
+            this.scene.start('menu');
         }).setOrigin(0.5, 0.5)
         .setScrollFactor(0) // Make it not scroll with the camera
         .setVisible(false) // Hide the button initially
         .setInteractive(false) // Disable interaction initially
         .setDepth(this.UI_DEPTH); // Ensure it appears above other elements
+
+        this.buttons = [this.continueButton, this.restartButton, this.titleButton];
     }
 
     addObjects() {
@@ -894,16 +963,19 @@ class Platformer extends Phaser.Scene {
     **************************************************************************************************************************/
 
     gameOver(text="Game Over") {
-        this.buttonRect.setVisible(true); // Show the overlay
-        this.buttonRect2.setVisible(true); // Show the second overlay
-
         this.gameOverText.setText(text); // Set the text
         this.gameOverText.setVisible(true); // Show the text
 
-        this.restartButton.setVisible(true); // Show the button
-        this.restartButton.setInteractive(true); // Enable interaction
-        this.continueButton.setVisible(true); // Show the continue button
-        this.continueButton.setInteractive(true); // Enable interaction
+        for (let rect of this.rects) {
+            rect.setVisible(true); // Show the overlay
+        }
+
+        for (let button of this.buttons) {
+            // Show buttons and enable interaction
+            button.setVisible(true);
+            button.setInteractive(true); 
+        }
+
         this.inputLocked = true;
 
         // Play level complete sound
@@ -914,15 +986,17 @@ class Platformer extends Phaser.Scene {
     }
 
     restartGame(restart) {
-        this.buttonRect.setVisible(false); // Hide the overlay
-        this.buttonRect2.setVisible(false); // Hide the second overlay
         
         this.gameOverText.setVisible(false); // Hide the text
 
-        this.restartButton.setVisible(false); // Hide the button
-        this.restartButton.setInteractive(false); // Disable interaction
-        this.continueButton.setVisible(false); // Hide the continue button
-        this.continueButton.setInteractive(false); // Disable interaction
+        for (let rect of this.rects) {
+            rect.setVisible(false); // Hide the overlay
+        }
+
+        for (let button of this.buttons) {
+            button.setVisible(false); // Hide all buttons
+            button.setInteractive(false); // Disable interaction
+        }
 
         let playerScore = this.registry.get('playerScore');
         // Check if the player score is greater than the high score
@@ -934,9 +1008,12 @@ class Platformer extends Phaser.Scene {
         this.registry.get('bgMusic').setVolume(0.4); // Reset background music volume
 
         if (restart) {
-            this.registry.set('playerScore', 0);
-            this.scene.stop("level1");
-            this.scene.start("level1");
+            this.registry.set('playerScore', 0); // Reset score
+            let highScore = parseInt(localStorage.getItem('highScore')) || 0; // Save high score
+            localStorage.clear(); // Clear local storage
+            localStorage.setItem('highScore', highScore); // Reset high score
+            this.scene.stop('level1');
+            this.scene.start('level1');
         } else {
             this.inputLocked = false;
             this.time.delayedCall(5000, () => { // wait 5 seconds before resetting so player leaves flag

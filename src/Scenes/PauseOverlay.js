@@ -49,22 +49,43 @@ class PauseOverlay extends Phaser.Scene {
 
         // Resume button
         makeButton('[ Resume ]', centerY + 80, () => {
-            this.scene.stop();                         // Stop pause overlay
-            this.scene.resume(this.gameSceneKey);      // Resume the paused game scene
+            this.input.enabled = false;
+
+            this.tweens.add({
+                targets: this.cameras.main,
+                alpha: 0,
+                duration: 800,
+                ease: 'Linear',
+                onComplete: () => {
+                    this.scene.stop();                 // Stop pause overlay
+                    this.scene.resume(this.gameSceneKey); // Resume the paused game scene
+                    this.scene.get(this.gameSceneKey).inputLocked = false;   // Unlock input
+                }
+            });
         });
 
         // Resume with esc key
         this.input.keyboard.on('keydown-ESC', () => {
-            this.click.play();                         // Play button click sound
-            this.scene.stop();                         // Stop pause overlay
-            this.scene.resume(this.gameSceneKey);      // Resume the paused game scene
+            this.input.enabled = false;
+            this.click.play();
+
+            this.tweens.add({
+                targets: this.cameras.main,
+                alpha: 0,
+                duration: 800,
+                ease: 'Linear',
+                onComplete: () => {
+                    this.scene.stop();                 // Stop pause overlay
+                    this.scene.resume(this.gameSceneKey); // Resume the paused game scene
+                    this.scene.get(this.gameSceneKey).inputLocked = false;   // Unlock input
+                }
+            });
         });
 
         // Exit button
         makeButton('[ Return to Menu ]', centerY + 120, () => {
-            this.scene.stop(this.gameSceneKey);        // Stop the game scene
             this.scene.stop();                         // Stop this overlay
-            this.scene.start('menu');                  // Go to main menu
+            this.scene.launch('menu');                  // Go to main menu
         });
     }
 }
