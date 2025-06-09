@@ -130,15 +130,20 @@ class Platformer extends Phaser.Scene {
         });
 
         // Load saved game
-        const saved = localStorage.getItem('savedCheckpoint');
-        if (saved) {
-            const checkpoint = JSON.parse(saved);
-            
-            if (checkpoint.scene === this.scene.key) {
-                my.sprite.player.x = checkpoint.spawnX;
-                my.sprite.player.y = checkpoint.spawnY;
-                this.registry.set('playerScore', checkpoint.score);
-                my.sprite.player.setPosition(checkpoint.spawnX, checkpoint.spawnY);
+       const isNewGame = this.registry.get('newGame');
+        this.registry.set('newGame', false); // reset for future restarts
+
+        if (!isNewGame) {
+            const saved = localStorage.getItem('savedCheckpoint');
+            if (saved) {
+                const checkpoint = JSON.parse(saved);
+                
+                if (checkpoint.scene === this.scene.key) {
+                    my.sprite.player.x = checkpoint.spawnX;
+                    my.sprite.player.y = checkpoint.spawnY;
+                    this.registry.set('playerScore', checkpoint.score);
+                    my.sprite.player.setPosition(checkpoint.spawnX, checkpoint.spawnY);
+                }
             }
         }
 
@@ -149,8 +154,6 @@ class Platformer extends Phaser.Scene {
         if (this.inputLocked) { // if input is locked, show the menu
             this.scene.launch('menu');
         }
-
-        console.log(this.spawnPoint);
     }
 
     update(time, delta) {

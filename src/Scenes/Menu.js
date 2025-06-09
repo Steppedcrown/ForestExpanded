@@ -108,12 +108,6 @@ class Menu extends Phaser.Scene {
         // New game Button
         makeButton('[ New Game ]', centerY + this.offsetY, () => {
             this.input.enabled = false;
-            // Reset and restart level
-            this.registry.set('playerScore', 0);
-            let highScore = parseInt(localStorage.getItem('highScore')) || 0;
-            localStorage.clear();
-            localStorage.setItem('highScore', highScore); // Reset high score
-            this.scene.start('level1');
 
             this.tweens.add({
                 targets: this.cameras.main,
@@ -121,8 +115,16 @@ class Menu extends Phaser.Scene {
                 duration: 800,
                 ease: 'Linear',
                 onComplete: () => {
+                    this.registry.set('playerScore', 0);
+                    this.registry.set('newGame', true); // 👈 mark this as a new game
+
+                    let highScore = parseInt(localStorage.getItem('highScore')) || 0;
+                    localStorage.clear();
+                    localStorage.setItem('highScore', highScore);
+
                     this.scene.get('level1').inputLocked = false;
-                    this.scene.stop(); // stop menu
+                    this.scene.start('level1');
+                    this.scene.stop();
                 }
             });
         });
