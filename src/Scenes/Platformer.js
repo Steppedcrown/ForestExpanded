@@ -311,23 +311,25 @@ class Platformer extends Phaser.Scene {
         });
 
         // Add enemy collision logic
-        this.physics.add.collider(my.sprite.player, this.enemyGroup, (player, enemy) => {
-            const enemyId = enemy._id;
+        [this.enemyGroup, this.flyingEnemyGroup].forEach(group => {
+            this.physics.add.collider(my.sprite.player, group, (player, enemy) => {
+                const enemyId = enemy._id;
 
-            if (player.body.velocity.y >= 0 && enemy.body.touching.up && player.body.touching.down) {
-                // Save defeat to localStorage
-                const current = new Set(JSON.parse(localStorage.getItem('defeatedEnemies') || '[]'));
-                current.add(enemyId);
-                localStorage.setItem('defeatedEnemies', JSON.stringify([...current]));
+                if (player.body.velocity.y >= 0 && enemy.body.touching.up && player.body.touching.down) {
+                    // Save defeat to localStorage
+                    const current = new Set(JSON.parse(localStorage.getItem('defeatedEnemies') || '[]'));
+                    current.add(enemyId);
+                    localStorage.setItem('defeatedEnemies', JSON.stringify([...current]));
 
-                // Enemy defeated
-                enemy.destroy();
-                player.setVelocityY(-200);
-                this.jumpSound.play();
-            } else {
-                // Player hit side or bottom = death
-                this.playerDead = true;
-            }
+                    // Enemy defeated
+                    enemy.destroy();
+                    player.setVelocityY(-200);
+                    this.jumpSound.play();
+                } else {
+                    // Player hit side or bottom = death
+                    this.playerDead = true;
+                }
+            });
         });
     }
 
