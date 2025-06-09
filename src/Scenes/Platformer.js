@@ -340,7 +340,7 @@ class Platformer extends Phaser.Scene {
         });
 
         // Add enemies
-        const basicEnemy1 = this.createEnemy(600, 0, 'tile_0022.png', this.enemyGroup, false, "enemy_1", 50);
+        const basicEnemy1 = this.createEnemy(450, 400, 'tile_0022.png', this.enemyGroup, false, "enemy_1", 50);
         const flyingEnemy1 = this.createEnemy(300, 100, 'tile_0025.png', this.flyingEnemyGroup, true, "flying_enemy_1", 75);
 
         // Remove defeated enemies
@@ -821,7 +821,7 @@ class Platformer extends Phaser.Scene {
             const speed = props.speed || 50;
 
             // Calculate tween duration
-            const duration = (range / speed) * 1000;
+            const duration = Math.abs((range / speed) * 1000);
 
             // Determine target position
             const targetPos = (axis === 'x')
