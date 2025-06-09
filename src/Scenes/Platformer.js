@@ -107,6 +107,7 @@ class Platformer extends Phaser.Scene {
         this.setupInput();
         this.setupAudio();
         this.setupVFX();
+        this.setupEnemies();
 
         // Load saved game
         const saved = localStorage.getItem('savedCheckpoint');
@@ -153,6 +154,36 @@ class Platformer extends Phaser.Scene {
     /*************************************************************************************************************** 
     -------------------------------------------------- GAME SETUP --------------------------------------------------
     ***************************************************************************************************************/
+    setupEnemies() {
+        // Create enemy group
+        this.enemyGroup = this.physics.add.group({
+            immovable: true,
+            allowGravity: false
+        });
+
+        // Add enemy collision handling
+        this.physics.add.collider(my.sprite.player, this.enemyGroup, (player, enemy) => {
+            if (player.body.velocity.y >= 0 && enemy.body.touching.up && player.body.touching.down) {
+                // Landed on top of enemy
+                enemy.destroy();
+
+                // Bounce player upward
+                player.setVelocityY(-200); // Adjust for bounce height
+
+                // Play jump sound
+                this.jumpSound.play();
+            } else {
+                // Hit from side or bottom = player death
+                this.handleRespawn(true); // true = dead on function call
+            }
+        });
+
+        // Add enemies
+        const enemy = this.enemyGroup.create(200, 200, 'platformer_characters', 'tile_0022.png');
+        enemy.setOrigin(0.5, 1); // Feet on ground
+        enemy.body.setSize(enemy.width, enemy.height); // Adjust hitbox if needed
+    }
+
     setupInput() {
         // Input handling
         cursors = this.input.keyboard.createCursorKeys();
@@ -392,16 +423,10 @@ class Platformer extends Phaser.Scene {
         });
 
         const collected = new Set(JSON.parse(localStorage.getItem('collectedItems')));
-        console.log("Collected items from localStorage: ", collected);
         if (collected && collected.size > 0) {
             [this.coins, this.diamonds].forEach(group => {
                 group.forEach(obj => {
-                    //const id = `${obj.name}_${Math.round(obj.x)}_${Math.round(obj.y)}`;
-                    console.log("Checking collected item: " + obj.id);
                     if (collected.has(obj.id)) {
-                        console.log("Removing collected item: " + obj.id);
-                        //obj.setActive(false, false); // Deactivate the object
-                        //obj.setVisible(false); // Hide the object
                         obj.destroy(); // Destroy the object
                     }
                 });
@@ -448,7 +473,6 @@ class Platformer extends Phaser.Scene {
             this.updateScore(1); // increment score
 
             const coinId = `coin_${Math.round(coin.x)}_${Math.round(coin.y)}`;
-            console.log("Collected coin: " + coinId);
             this.collectedItems = JSON.parse(localStorage.getItem('collectedItems'));
             this.collectedItems = new Set(this.collectedItems || []); // Initialize if null
 
@@ -479,7 +503,6 @@ class Platformer extends Phaser.Scene {
             this.updateScore(5); // increment score
 
             const diamondId = `diamond_${Math.round(diamond.x)}_${Math.round(diamond.defaultY)}`; // Use defaultY for bobbing
-            console.log("Collected diamond: " + diamondId);
             this.collectedItems = JSON.parse(localStorage.getItem('collectedItems'));
             this.collectedItems = new Set(this.collectedItems || []); // Initialize if null
 
@@ -905,10 +928,8 @@ class Platformer extends Phaser.Scene {
         // If player is grounded and on safe ground, update last safe position
         if (groundedNow) {
             const tile = this.groundLayer.getTileAtWorldXY(my.sprite.player.x, my.sprite.player.y + my.sprite.player.height / 2);
-            //console.log(tile.properties);
             if (tile && tile.properties.safeGround) {
                 this.lastSafePosition = [my.sprite.player.x, my.sprite.player.y];
-                //console.log("Safe spawn point updated to: ", this.lastSafePosition);
             }
         }
     }
