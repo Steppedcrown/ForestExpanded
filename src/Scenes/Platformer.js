@@ -12,10 +12,11 @@ class Platformer extends Phaser.Scene {
         this.PARTICLE_VELOCITY = 50; // velocity of the particles
         this.SCALE = 2.0; // scale of the game
         this.MAX_VELOCITY = 300; // max speed
+        this.MAX_FALL_VELOCITY = 750; // max fall speed
 
         // Spawn points
-        this.spawnPoint = [75, 245]; // beginning spawn point
-        //this.spawnPoint = [1200, 0]; // end spawn point
+        this.spawnPoint = [430, 400]; // beginning spawn point
+        //this.spawnPoint = [2005, 100]; // end spawn point
 
         // Game states
         this.isGameOver = false;
@@ -50,13 +51,14 @@ class Platformer extends Phaser.Scene {
 
     create() {
         // Create a new tilemap game object
-        this.map = this.add.tilemap("platformer-level-1", 18, 18, 80, 20);
+        this.map = this.add.tilemap("platformer-level-1", 18, 18, 120, 30);
 
         // Add a tileset to the map
         this.tileset = this.map.addTilesetImage("kenny_tilemap_packed", "tilemap_tiles");
 
         // Create layers
         this.groundLayer = this.map.createLayer("Ground-n-Platforms", this.tileset, 0, 0);
+        this.invisibleLayer = this.map.createLayer("Invisible", this.tileset, 0, 0).setVisible(false);
         this.undergroundLayer = this.map.createLayer("Underground", this.tileset, 0, 0);
         this.detailLayer = this.map.createLayer("Details", this.tileset, 0, 0);
         this.waterfallLayer = this.map.createLayer("Waterfalls", this.tileset, 0, 0);
@@ -74,6 +76,9 @@ class Platformer extends Phaser.Scene {
         this.groundLayer.setCollisionByProperty({
             collides: true
         });
+        this.invisibleLayer.setCollisionByProperty({
+            collides: true
+        });
 
         // set up player avatar
         my.sprite.player = this.physics.add.sprite(this.spawnPoint[0], this.spawnPoint[1], "platformer_characters", "tile_0000.png");
@@ -86,6 +91,7 @@ class Platformer extends Phaser.Scene {
 
         // Enable collision handling
         this.physics.add.collider(my.sprite.player, this.groundLayer);
+        this.physics.add.collider(my.sprite.player, this.invisibleLayer);
 
         // Bounds
         this.physics.world.setBounds(0, -0, this.map.widthInPixels, this.map.heightInPixels);
@@ -147,6 +153,7 @@ class Platformer extends Phaser.Scene {
 
         // Handle jumping
         this.handleJump(groundedNow, delta);
+        if (my.sprite.player.body.velocity.y > this.MAX_FALL_VELOCITY) my.sprite.player.body.setVelocityY(this.MAX_FALL_VELOCITY);
 
         // Handle landing VFX
         this.landingVFX(groundedNow);
@@ -340,8 +347,11 @@ class Platformer extends Phaser.Scene {
         });
 
         // Add enemies
-        const basicEnemy1 = this.createEnemy(600, 0, 'tile_0022.png', this.enemyGroup, false, "enemy_1", 50);
-        const flyingEnemy1 = this.createEnemy(300, 100, 'tile_0025.png', this.flyingEnemyGroup, true, "flying_enemy_1", 75);
+        const flyingEnemy1 = this.createEnemy(600, 100, 'tile_0025.png', this.flyingEnemyGroup, true, "flying_enemy_1", 75);
+        const basicEnemy1 = this.createEnemy(650, 350, 'tile_0022.png', this.enemyGroup, false, "enemy_1", 50);
+        const basicEnemy2 = this.createEnemy(1000, 150, 'tile_0022.png', this.enemyGroup, false, "enemy_2", 50);
+        const basicEnemy3 = this.createEnemy(1300, 150, 'tile_0022.png', this.enemyGroup, false, "enemy_3", 50);
+        const basicEnemy4 = this.createEnemy(1550, 150, 'tile_0022.png', this.enemyGroup, false, "enemy_4", 50);
 
         // Remove defeated enemies
         [this.enemyGroup, this.flyingEnemyGroup].forEach(group => {
@@ -393,6 +403,12 @@ class Platformer extends Phaser.Scene {
             }
         });
 
+        this.input.keyboard.on('keydown-R', () => {
+            my.sprite.player.setVelocity(0, 0); // reset velocity
+            my.sprite.player.setAcceleration(0, 0); // reset acceleration
+            my.sprite.player.setDrag(0, 0); // reset drag
+            my.sprite.player.setPosition(this.spawnPoint[0], this.spawnPoint[1]); // respawn at last checkpoint
+        });
     }
 
     setupAudio() {
@@ -475,9 +491,12 @@ class Platformer extends Phaser.Scene {
         my.vfx.collect.stop();
 
         // Bubbles
-        this.createBubbles(150, 240, 315, 375);
-        this.createBubbles(1050, 1270, 370, 375);
-        this.createBubbles(1275, 1375, 305, 375);
+        this.createBubbles(330, 405, 155, 155);
+        this.createBubbles(330, 500, 545, 545);
+        this.createBubbles(510, 600, 450, 545);
+        this.createBubbles(1160, 1240, 515, 545);
+        this.createBubbles(1410, 1640, 500, 545);
+        this.createBubbles(1645, 1725, 440, 545);
     }
 
     setupScore() {
@@ -485,8 +504,8 @@ class Platformer extends Phaser.Scene {
         let playerScore = this.registry.get('playerScore') || 0;
         this.registry.set('playerScore', playerScore);
         
-        let xPos = 1125;
-        let yPos = 505;
+        let xPos = 1200;
+        let yPos = 720;
         let fontSize = 12;
         // Add score text
         this.displayScore = this.add.bitmapText(xPos, yPos, 'myFont', 'Score: ' + this.registry.get('playerScore'), fontSize);
@@ -530,6 +549,7 @@ class Platformer extends Phaser.Scene {
             strokeThickness: 5
         }).setOrigin(0.5)
         .setVisible(false) // Hide the text initially
+        .setDepth(this.UI_DEPTH) // Ensure it appears above other elements
         .setScrollFactor(0); // Make it not scroll with the camera
 
         // Restart button
@@ -819,14 +839,16 @@ class Platformer extends Phaser.Scene {
             const axis = props.axis || 'y'; // Default to vertical movement
             const range = props.range || 100;
             const speed = props.speed || 50;
+            const reverse = props.reverse || false;
 
             // Calculate tween duration
-            const duration = (range / speed) * 1000;
+            const duration = Math.abs((range / speed) * 1000);
 
             // Determine target position
             const targetPos = (axis === 'x')
-                ? { x: platform.x + range }
-                : { y: platform.y - range }; // up if y
+                ? { x: platform.x + (reverse ? -range : range) }
+                : { y: platform.y + (reverse ? range : -range) }; // down if reversed
+
 
             // Tween to move platform
             this.tweens.add({
@@ -1132,7 +1154,6 @@ class Platformer extends Phaser.Scene {
                 [this.flyingEnemyGroup].forEach(group => {
                     group.getChildren().forEach(enemy => enemy.body.checkCollision.none = true);
                 });
-
                 my.sprite.player.setPosition(this.spawnPoint[0], this.spawnPoint[1]); // respawn at last checkpoint
             }
         });
