@@ -269,6 +269,15 @@ class Platformer extends Phaser.Scene {
             return;
         }
 
+        // Check if player is within enemy's detection range
+        const inRangeX = Math.abs(my.sprite.player.x - enemy.x) <= (enemy.rangeX || 0);
+        const inRangeY = Math.abs(my.sprite.player.y - enemy.y) <= (enemy.rangeY || 0);
+
+        if (!inRangeX || !inRangeY) {
+            enemy.setVelocity(0); // Stop moving if out of range
+            return;
+        }
+
         if (!enemy.path || enemy.pathIndex >= enemy.path.length) {
             // Move directly toward the player instead
             const dx = my.sprite.player.x - enemy.x;
@@ -340,7 +349,7 @@ class Platformer extends Phaser.Scene {
     -------------------------------------------------- GAME SETUP --------------------------------------------------
     ***************************************************************************************************************/
 
-    createEnemy(x, y, frame, group, flying, id, speed) {
+    createEnemy(x, y, frame, group, flying, id, speed, rx, ry) {
         const enemy = group.create(x, y, 'platformer_characters', frame);
         enemy.setOrigin(0.5, 1); // Set origin to center bottom
         enemy.body.setSize(enemy.width, enemy.height); // Modify size to fit sprite
@@ -355,6 +364,8 @@ class Platformer extends Phaser.Scene {
             enemy.pathIndex = 0; // Initialize path index
             enemy.body.setSize(enemy.width, enemy.height / 4); // Modify size to fit sprite
             enemy.type = 'flying'; // Set type for flying enemies
+            enemy.rangeX = rx || 200; // Range in X direction for flying enemies
+            enemy.rangeY = ry || 100; // Range in Y direction for flying enemies
             
             enemy.anims.play('fly'); // Play the flying animation
         } else {
