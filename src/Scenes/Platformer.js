@@ -429,6 +429,7 @@ class Platformer extends Phaser.Scene {
                     enemy.body.enable = false;
                     enemy.setActive(false).setCollideWorldBounds(false);
                     if (enemy.type == 'ground') enemy.anims.play('enemy_death');
+                    this.sound.play('enemyHitSound'); // Play enemy hit sound
 
                     // Fall with tween
                     this.tweens.add({
@@ -501,7 +502,11 @@ class Platformer extends Phaser.Scene {
             loop: false
         });
         this.checkpointSound = this.sound.add('checkpointSound', {
-            volume: 0.2,
+            volume: 0.75,
+            loop: false
+        });
+        this.enemyHitSound = this.sound.add('enemyHitSound', {
+            volume: 0.5,
             loop: false
         });
     }
