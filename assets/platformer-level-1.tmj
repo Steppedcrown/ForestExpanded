@@ -1504,7 +1504,7 @@
                         {
                          "name":"range",
                          "type":"int",
-                         "value":45
+                         "value":60
                         }, 
                         {
                          "name":"speed",
@@ -2170,12 +2170,12 @@
                         {
                          "name":"range",
                          "type":"int",
-                         "value":60
+                         "value":70
                         }, 
                         {
                          "name":"reverse",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"speed",
@@ -2187,7 +2187,7 @@
                  "visible":true,
                  "width":18,
                  "x":1907.48895920754,
-                 "y":232.306555240343
+                 "y":232.927673252765
                 }, 
                 {
                  "gid":147,
@@ -2203,12 +2203,17 @@
                         {
                          "name":"range",
                          "type":"int",
-                         "value":25
+                         "value":50
+                        }, 
+                        {
+                         "name":"reverse",
+                         "type":"bool",
+                         "value":false
                         }, 
                         {
                          "name":"speed",
                          "type":"int",
-                         "value":70
+                         "value":60
                         }],
                  "rotation":0,
                  "type":"",
@@ -2231,7 +2236,7 @@
                         {
                          "name":"range",
                          "type":"int",
-                         "value":40
+                         "value":80
                         }, 
                         {
                          "name":"reverse",
