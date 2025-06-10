@@ -398,9 +398,13 @@ class Platformer extends Phaser.Scene {
         // Add enemies
         const flyingEnemy1 = this.createEnemy(600, 100, 'tile_0025.png', this.flyingEnemyGroup, true, "flying_enemy_1", 75);
         const basicEnemy1 = this.createEnemy(650, 350, 'tile_0022.png', this.enemyGroup, false, "enemy_1", 50);
+        const basicEnemy8 = this.createEnemy(800, 450, 'tile_0022.png', this.enemyGroup, false, "enemy_8", 50);
         const basicEnemy2 = this.createEnemy(1000, 150, 'tile_0022.png', this.enemyGroup, false, "enemy_2", 50);
         const basicEnemy3 = this.createEnemy(1300, 150, 'tile_0022.png', this.enemyGroup, false, "enemy_3", 50);
-        const basicEnemy4 = this.createEnemy(1550, 150, 'tile_0022.png', this.enemyGroup, false, "enemy_4", 50);
+        const basicEnemy4 = this.createEnemy(1550, 300, 'tile_0022.png', this.enemyGroup, false, "enemy_4", 50);
+        const basicEnemy5 = this.createEnemy(1550, 400, 'tile_0022.png', this.enemyGroup, false, "enemy_5", 50);
+        const basicEnemy6 = this.createEnemy(1900, 500, 'tile_0022.png', this.enemyGroup, false, "enemy_6", 50);
+        const basicEnemy7 = this.createEnemy(2000, 500, 'tile_0022.png', this.enemyGroup, false, "enemy_7", 50);
 
         // Remove defeated enemies
         [this.enemyGroup, this.flyingEnemyGroup].forEach(group => {
