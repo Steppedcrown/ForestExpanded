@@ -354,12 +354,14 @@ class Platformer extends Phaser.Scene {
             enemy.path = null; // Initialize path for flying enemies
             enemy.pathIndex = 0; // Initialize path index
             enemy.body.setSize(enemy.width, enemy.height / 4); // Modify size to fit sprite
+            enemy.type = 'flying'; // Set type for flying enemies
             
             enemy.anims.play('fly'); // Play the flying animation
         } else {
             enemy.direction = 1; // Default direction for ground enemies
             enemy.setVelocityX(enemy.speed * enemy.direction); // Set initial velocity
-            //enemy.allowGravity = true; // Allow gravity for ground enemies
+            enemy.type = 'ground'; // Set type for ground enemies
+
             enemy.anims.play('enemyWalk'); // Play the walking animation
         }
 
@@ -412,7 +414,22 @@ class Platformer extends Phaser.Scene {
                     current.add(enemyId);
                     localStorage.setItem('defeatedEnemies', JSON.stringify([...current]));
 
-                    enemy.destroy();
+                    // Disable collider and physics interactions
+                    enemy.body.enable = false;
+                    enemy.setActive(false).setCollideWorldBounds(false);
+                    if (enemy.type == 'ground') enemy.anims.play('enemy_death');
+
+                    // Fall with tween
+                    this.tweens.add({
+                        targets: enemy,
+                        y: this.scale.height + 100, // Fall below screen
+                        duration: 1200,
+                        ease: 'Quad.easeIn',
+                        onComplete: () => {
+                            enemy.destroy(); // Remove from game
+                        }
+                    });
+
                     player.setVelocityY(-200);
                     this.jumpSound.play();
                 } else {
