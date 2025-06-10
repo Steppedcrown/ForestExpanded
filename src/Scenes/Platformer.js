@@ -105,6 +105,8 @@ class Platformer extends Phaser.Scene {
         this.cameras.main.startFollow(my.sprite.player, true, 0.1, 0.1); // (target, [,roundPixels][,lerpX][,lerpY])
         this.cameras.main.setDeadzone(20, 20);
         this.cameras.main.setZoom(this.SCALE);
+        this.cameras.main.roundPixels = true;
+
         // Set the background color
         const bgColor = this.cache.tilemap.get("platformer-level-1").data.backgroundcolor;
         if (bgColor) this.cameras.main.setBackgroundColor(bgColor);
@@ -690,7 +692,8 @@ class Platformer extends Phaser.Scene {
                 volume: 0.5,
                 loop: false
             });
-            this.scene.start('menu');
+            this.scene.launch('menu');
+            this.restartGame(false);
         }).setOrigin(0.5, 0.5)
         .setScrollFactor(0) // Make it not scroll with the camera
         .setVisible(false) // Hide the button initially
@@ -867,7 +870,7 @@ class Platformer extends Phaser.Scene {
             }
 
             // If at end of level, trigger game over
-            if (flag.data.values.endFlag) {
+            if (flag.data.values.endFlag && !this.inputLocked) {
                 if (!this.isGameOver) {
                     this.isGameOver = true; // prevent multiple triggers
                     console.log("You reached the end! Final Score: " + this.registry.get('playerScore'));
