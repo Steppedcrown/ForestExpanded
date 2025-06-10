@@ -395,8 +395,16 @@ class Platformer extends Phaser.Scene {
             allowGravity: false
         });
 
-        // Add enemies
-        const flyingEnemy1 = this.createEnemy(600, 100, 'tile_0025.png', this.flyingEnemyGroup, true, "flying_enemy_1", 75);
+        // Flying enemies
+        const flyingEnemy1 = this.createEnemy(600, 100, 'tile_0025.png', this.flyingEnemyGroup, true, "flying_enemy_1", 75, 300, 100);
+        const flyingEnemy2 = this.createEnemy(1170, 40, 'tile_0025.png', this.flyingEnemyGroup, true, "flying_enemy_2", 40, 200, 200);
+        const flyingEnemy3 = this.createEnemy(1045, 325, 'tile_0025.png', this.flyingEnemyGroup, true, "flying_enemy_3", 55, 300, 300);
+        const flyingEnemy4 = this.createEnemy(760, 160, 'tile_0025.png', this.flyingEnemyGroup, true, "flying_enemy_4", 75, 200, 100);
+        const flyingEnemy5 = this.createEnemy(145, 290, 'tile_0025.png', this.flyingEnemyGroup, true, "flying_enemy_5", 100, 50, 800);
+        const flyingEnemy6 = this.createEnemy(520, 215, 'tile_0025.png', this.flyingEnemyGroup, true, "flying_enemy_6", 20, 50, 50);
+        const flyingEnemy7 = this.createEnemy(1890, 110, 'tile_0025.png', this.flyingEnemyGroup, true, "flying_enemy_7", 25, 200, 100);
+
+        // Ground enemies
         const basicEnemy1 = this.createEnemy(650, 350, 'tile_0022.png', this.enemyGroup, false, "enemy_1", 50);
         const basicEnemy8 = this.createEnemy(800, 450, 'tile_0022.png', this.enemyGroup, false, "enemy_8", 50);
         const basicEnemy2 = this.createEnemy(1000, 150, 'tile_0022.png', this.enemyGroup, false, "enemy_2", 50);
