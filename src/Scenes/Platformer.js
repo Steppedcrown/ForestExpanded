@@ -105,6 +105,8 @@ class Platformer extends Phaser.Scene {
         this.cameras.main.startFollow(my.sprite.player, true, 0.1, 0.1); // (target, [,roundPixels][,lerpX][,lerpY])
         this.cameras.main.setDeadzone(20, 20);
         this.cameras.main.setZoom(this.SCALE);
+        this.cameras.main.roundPixels = true;
+
         // Set the background color
         const bgColor = this.cache.tilemap.get("platformer-level-1").data.backgroundcolor;
         if (bgColor) this.cameras.main.setBackgroundColor(bgColor);
@@ -269,6 +271,15 @@ class Platformer extends Phaser.Scene {
             return;
         }
 
+        // Check if player is within enemy's detection range
+        const inRangeX = Math.abs(my.sprite.player.x - enemy.x) <= (enemy.rangeX || 0);
+        const inRangeY = Math.abs(my.sprite.player.y - enemy.y) <= (enemy.rangeY || 0);
+
+        if (!inRangeX || !inRangeY) {
+            enemy.setVelocity(0); // Stop moving if out of range
+            return;
+        }
+
         if (!enemy.path || enemy.pathIndex >= enemy.path.length) {
             // Move directly toward the player instead
             const dx = my.sprite.player.x - enemy.x;
@@ -340,7 +351,7 @@ class Platformer extends Phaser.Scene {
     -------------------------------------------------- GAME SETUP --------------------------------------------------
     ***************************************************************************************************************/
 
-    createEnemy(x, y, frame, group, flying, id, speed) {
+    createEnemy(x, y, frame, group, flying, id, speed, rx, ry) {
         const enemy = group.create(x, y, 'platformer_characters', frame);
         enemy.setOrigin(0.5, 1); // Set origin to center bottom
         enemy.body.setSize(enemy.width, enemy.height); // Modify size to fit sprite
@@ -354,10 +365,17 @@ class Platformer extends Phaser.Scene {
             enemy.path = null; // Initialize path for flying enemies
             enemy.pathIndex = 0; // Initialize path index
             enemy.body.setSize(enemy.width, enemy.height / 4); // Modify size to fit sprite
+            enemy.type = 'flying'; // Set type for flying enemies
+            enemy.rangeX = rx || 200; // Range in X direction for flying enemies
+            enemy.rangeY = ry || 100; // Range in Y direction for flying enemies
+            
+            enemy.anims.play('fly'); // Play the flying animation
         } else {
             enemy.direction = 1; // Default direction for ground enemies
             enemy.setVelocityX(enemy.speed * enemy.direction); // Set initial velocity
-            //enemy.allowGravity = true; // Allow gravity for ground enemies
+            enemy.type = 'ground'; // Set type for ground enemies
+
+            enemy.anims.play('enemyWalk'); // Play the walking animation
         }
 
         return enemy;
@@ -409,7 +427,23 @@ class Platformer extends Phaser.Scene {
                     current.add(enemyId);
                     localStorage.setItem('defeatedEnemies', JSON.stringify([...current]));
 
-                    enemy.destroy();
+                    // Disable collider and physics interactions
+                    enemy.body.enable = false;
+                    enemy.setActive(false).setCollideWorldBounds(false);
+                    if (enemy.type == 'ground') enemy.anims.play('enemy_death');
+                    this.sound.play('enemyHitSound'); // Play enemy hit sound
+
+                    // Fall with tween
+                    this.tweens.add({
+                        targets: enemy,
+                        y: this.scale.height + 100, // Fall below screen
+                        duration: 1200,
+                        ease: 'Quad.easeIn',
+                        onComplete: () => {
+                            enemy.destroy(); // Remove from game
+                        }
+                    });
+
                     player.setVelocityY(-200);
                     this.jumpSound.play();
                 } else {
@@ -470,7 +504,11 @@ class Platformer extends Phaser.Scene {
             loop: false
         });
         this.checkpointSound = this.sound.add('checkpointSound', {
-            volume: 0.2,
+            volume: 0.75,
+            loop: false
+        });
+        this.enemyHitSound = this.sound.add('enemyHitSound', {
+            volume: 0.5,
             loop: false
         });
     }
@@ -654,7 +692,8 @@ class Platformer extends Phaser.Scene {
                 volume: 0.5,
                 loop: false
             });
-            this.scene.start('menu');
+            this.scene.launch('menu');
+            this.restartGame(false);
         }).setOrigin(0.5, 0.5)
         .setScrollFactor(0) // Make it not scroll with the camera
         .setVisible(false) // Hide the button initially
@@ -831,7 +870,7 @@ class Platformer extends Phaser.Scene {
             }
 
             // If at end of level, trigger game over
-            if (flag.data.values.endFlag) {
+            if (flag.data.values.endFlag && !this.inputLocked) {
                 if (!this.isGameOver) {
                     this.isGameOver = true; // prevent multiple triggers
                     console.log("You reached the end! Final Score: " + this.registry.get('playerScore'));

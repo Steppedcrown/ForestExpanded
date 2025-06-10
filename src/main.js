@@ -17,7 +17,8 @@ let config = {
     parent: 'phaser-game',
     type: Phaser.CANVAS,
     render: {
-        pixelArt: true  // prevent pixel art from getting blurred when scaled
+        pixelArt: true,  // prevent pixel art from getting blurred when scaled
+        antialias: false // disable anti-aliasing for pixel art
     },
     physics: {
         default: 'arcade',
