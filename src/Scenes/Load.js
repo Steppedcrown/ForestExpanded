@@ -74,6 +74,40 @@ class Load extends Phaser.Scene {
         });
 
         this.anims.create({
+            key: 'fly',
+            defaultTextureKey: 'platformer_characters',
+            frames: [
+                { frame: 'tile_0024.png' },
+                { frame: 'tile_0025.png' },
+                { frame: 'tile_0026.png' },
+                { frame: 'tile_0024.png' }
+            ],
+            frameRate: 10,   // 10 frames per second
+            repeat: -1       // Loop forever
+        });
+
+        this.anims.create({
+            key: 'enemyWalk',
+            defaultTextureKey: 'platformer_characters',
+            frames: [
+                { frame: 'tile_0021.png' },
+                { frame: 'tile_0022.png' }
+            ],
+            frameRate: 10,   // 10 frames per second
+            repeat: -1       // Loop forever
+        });
+
+        this.anims.create({
+            key: 'enemyDie',
+            defaultTextureKey: 'platformer_characters',
+            frames: [
+                { frame: 'tile_0023.png' }
+            ],
+            frameRate: 10,   // 10 frames per second
+            repeat: -1       // Loop forever
+        });
+
+        this.anims.create({
             key: 'coinSpin',
             frames: this.anims.generateFrameNumbers('tilemap_sheet', {
                 start: 151,

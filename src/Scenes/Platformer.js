@@ -354,10 +354,13 @@ class Platformer extends Phaser.Scene {
             enemy.path = null; // Initialize path for flying enemies
             enemy.pathIndex = 0; // Initialize path index
             enemy.body.setSize(enemy.width, enemy.height / 4); // Modify size to fit sprite
+            
+            enemy.anims.play('fly'); // Play the flying animation
         } else {
             enemy.direction = 1; // Default direction for ground enemies
             enemy.setVelocityX(enemy.speed * enemy.direction); // Set initial velocity
             //enemy.allowGravity = true; // Allow gravity for ground enemies
+            enemy.anims.play('enemyWalk'); // Play the walking animation
         }
 
         return enemy;
