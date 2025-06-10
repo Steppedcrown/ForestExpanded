@@ -3143,6 +3143,20 @@
                         }]
                 }, 
                 {
+                 "id":104,
+                 "properties":[
+                        {
+                         "name":"collides",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
+                         "name":"safeGround",
+                         "type":"bool",
+                         "value":true
+                        }]
+                }, 
+                {
                  "animation":[
                         {
                          "duration":200,
