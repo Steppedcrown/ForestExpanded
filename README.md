@@ -1,4 +1,4 @@
-# Forest Expanded
+# Forest Platformer
 
 A platformer game built with [Phaser 3](https://phaser.io/) featuring dynamic physics-based gameplay with exploration and checkpoint mechanics.
 
