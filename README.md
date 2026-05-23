@@ -1,6 +1,7 @@
 # Forest Expanded
 
 A platformer game built with [Phaser 3](https://phaser.io/) featuring dynamic physics-based gameplay with exploration and checkpoint mechanics.
+Play on GitHub Pages: https://steppedcrown.github.io/ForestExpanded/
 
 ## Gameplay
 
