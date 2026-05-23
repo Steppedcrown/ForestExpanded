@@ -30,8 +30,12 @@ let config = {
             }
         }
     },
-    width: 1775,
-    height: 1000,
+    scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: window.innerWidth,
+        height: window.innerHeight
+    },
     scene: [Load, Platformer, Menu, PauseOverlay]
 }
 
