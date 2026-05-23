@@ -39,7 +39,7 @@ class Menu extends Phaser.Scene {
 
         // Credits
         let creditsText = "Created by: Aiden Waldorf\n\n" + 
-        "Visuals by Kenney Assets\n\n" +
+        "Visuals by: Kenney Assets\n\n" +
         "Audio: Mixkit, Pixabay\n\n" +
         "(See README for full attributions)\n\n";
         this.credits = this.add.bitmapText(centerX + 500, centerY - 10, 'myFont', creditsText, 16).setOrigin(0.5, 0).setVisible(false);
